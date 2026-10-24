@@ -25,16 +25,26 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies from the committed lockfile
+        run: npm ci
       - name: Lint
         run: npm run lint
       - name: Typecheck
         run: npm run typecheck
+      - name: Auth redirect and open-redirect guards
+        run: npm run test:auth
       - name: Database migrations and order flow
         run: npm run test:db
+      - name: Search, visibility and analytics
+        run: npm run test:search
+      - name: RLS harness self-test (offline)
+        run: npm run test:rls:selftest
       - name: Production build
         run: npm run build
+      - name: No credentials in tracked files
+        run: npm run secrets:scan
+      - name: Deployment folder and migration bundle are in sync
+        run: npm run release:verify
       - name: Route and header audit
         run: |
           npm run start -- -p 3100 > /tmp/shilevi-start.log 2>&1 &

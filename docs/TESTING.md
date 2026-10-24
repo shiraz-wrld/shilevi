@@ -9,9 +9,17 @@
 | `npm run build` | Production Next.js build | **PASS** |
 | `npm run test:db` | Migrations 0015–0024 + real RPCs in PGlite | **PASS** |
 | `npm run test:search` | Migration 0025 search, analytics and reporting in PGlite | **PASS — 33 checks** |
-| `npm run verify:routes` | Built server HTTP/SEO/security audit | **PASS — 311/311** |
-| `node tests/rls/selftest.mjs` | TOTP, config guards, denial classification (offline) | **PASS** |
-| `npm run test:rls:live` | RLS negative suite against a hosted Supabase project | **BLOCKED — NOT RUN** (no credentials) |
+| `npm run test:auth` | Open-redirect and post-login destination guards | **PASS — 34 checks** |
+| `npm run test:rls:selftest` | TOTP, config guards, denial classification, report redaction (offline) | **PASS** |
+| `npm run verify:routes` | Built server HTTP/SEO/security audit | **PASS — 311/311** (run against the `vercel-deploy/` build) |
+| `npm run secrets:scan` | Credential scan (keys, JWTs, env files) | **PASS** — 440 files, no findings |
+| `npm run release:verify` | Deployment and migration bundles match the source | **PASS** |
+| `cd vercel-deploy && npm ci && npx next build` | Independent build of the deployment folder | **PASS** — exit 0 |
+| `npm run test:rls:live` | RLS negative suite against a hosted Supabase project | **BLOCKED — NOT RUN**, exit 2 (no credentials) |
+
+Release commands (`release:sync`, `release:verify`, `deploy:verify`, `migrations:verify`,
+`secrets:scan`) and the independent deployment build are documented in
+[FINAL_RELEASE_STATUS.md](FINAL_RELEASE_STATUS.md) and [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md).
 
 `test:db` applies the actual migration SQL and drives the RPCs as four identities (customer,
 provider, rider, owner) plus an anonymous/public reader where relevant. It asserts:

@@ -104,6 +104,8 @@ check("denial classification accepts errors and empty results only", () => {
 
 check("reports stay free of secrets", async () => {
   const { redact } = await import("./lib/config.mjs");
+  // A deliberately fake token used to prove report redaction. Not a credential.
+  // secret-scan: allow-synthetic
   const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhYmMifQ.c2lnbmF0dXJl";
   assert.equal(redact(`token ${jwt} leaked`).includes("eyJhbGci"), false);
 });

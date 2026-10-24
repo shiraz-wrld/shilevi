@@ -1,8 +1,14 @@
 # Implementation status — durable progress ledger
 
-**Updated:** stage “real discovery, search and intelligent matching”.
+**Updated:** 2026-10-24 — release pass (repository organisation, Vercel packaging, Supabase migration
+bundle, security audit).
 **Whole-product detail:** `docs/REQUIREMENTS_MATRIX.md`. This file records the current stage so work
 can resume safely after an interruption, and so nothing is claimed beyond the evidence.
+**Latest release ledger:** `docs/FINAL_RELEASE_STATUS.md` — every command, exit code and blocker for
+the current state. Read that first; this file keeps the earlier stage history.
+
+The search/analytics stage below remains accurate: `npm run test:search` still passes 33 checks
+against migration 0025. No SQL changed in the 2026-10-24 release pass.
 
 Score labels:
 

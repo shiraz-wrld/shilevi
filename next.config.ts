@@ -11,6 +11,11 @@ const PRIVATE_AREAS = ["/account", "/admin", "/provider", "/rider", "/checkout",
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // The repository ships two lockfiles by design: the root application and the generated
+  // `vercel-deploy/` copy that Vercel builds. Without this, Next walks up and traces from the
+  // parent directory, which can bundle the wrong files. Tracing from the build's own directory
+  // keeps the output correct in both places.
+  outputFileTracingRoot: process.cwd(),
   images: {
     // Brand logos and listing media are served from Supabase Storage and provider CDNs.
     remotePatterns: [

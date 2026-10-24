@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=20.9.0"
   },
   "scripts": {
     "dev": "next dev",
@@ -13,8 +13,17 @@
     "typecheck": "tsc --noEmit",
     "test:db": "node tests/db/orders-flow.test.mjs",
     "test:rls:live": "node tests/rls/live-rls.mjs",
+    "test:rls:selftest": "node tests/rls/selftest.mjs",
+    "test:auth": "node tests/auth/redirect.test.mjs",
+    "test:search": "node tests/search/search.test.mjs",
     "verify:routes": "node scripts/route-audit.mjs",
-    "test:search": "node tests/search/search.test.mjs"
+    "deploy:sync": "node scripts/prepare-deploy.mjs",
+    "deploy:verify": "node scripts/prepare-deploy.mjs --check",
+    "migrations:sync": "node scripts/prepare-migrations.mjs",
+    "migrations:verify": "node scripts/prepare-migrations.mjs --check",
+    "release:sync": "npm run deploy:sync && npm run migrations:sync",
+    "release:verify": "npm run deploy:verify && npm run migrations:verify",
+    "secrets:scan": "node scripts/secret-scan.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

@@ -1,12 +1,24 @@
+# Dependencies and build output (Vercel regenerates all of it)
 node_modules/
 .next/
 out/
 build/
 coverage/
+tsconfig.tsbuildinfo
+
+# Compiled output of tsconfig.domain.json
+.domain-build/
+
+# Local verification artefacts (RLS reports, audit logs, server logs)
 reports/
+*.log
+
+# Secrets and environment files. .env.example is the only committed template.
 .env
 .env.*
 !.env.example
+
+# Deployment tooling and editor files
 .vercel/
-*.log
 .DS_Store
+Thumbs.db

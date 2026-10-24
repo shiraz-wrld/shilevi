@@ -3,17 +3,11 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-
-const SAFE_POST_LOGIN_PATHS = new Set(["/onboarding", "/account", "/account/orders", "/cart", "/checkout", "/admin", "/admin/categories", "/admin/brands", "/provider/orders", "/rider/jobs"]);
+import { safeNextPath } from "@/lib/auth/redirect";
 
 function getSafePostLoginPath() {
   const requested = new URLSearchParams(window.location.search).get("next");
-  if (!requested) return "/onboarding";
-  if (SAFE_POST_LOGIN_PATHS.has(requested)) return requested;
-  if (/^\/account\/orders\/[0-9a-f-]{36}$/i.test(requested)) return requested;
-  if (/^\/rider\/jobs\/[0-9a-f-]{36}$/i.test(requested)) return requested;
-  if (/^\/listing\/[0-9a-f-]{36}$/i.test(requested)) return requested;
-  return "/onboarding";
+  return safeNextPath(requested, "/onboarding");
 }
 
 export default function LoginPage() {
