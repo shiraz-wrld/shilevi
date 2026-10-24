@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>XYZ — Admin Control Centre and System Architecture</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#475569; --soft:#64748b; --line:#cbd5e1; --line2:#e2e8f0;
+    --blue:#1d4ed8; --blue-bg:#eff6ff; --blue-ink:#1e3a8a;
+    --green:#047857; --green-bg:#ecfdf5;
+    --amber:#b45309; --amber-bg:#fffbeb;
+    --red:#b91c1c; --red-bg:#fef2f2;
+    --panel:#ffffff; --bg:#f1f5f9; --dark:#0f172a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;}
+  body{width:2200px;}
+  .canvas{width:2200px;min-height:3200px;padding:36px 40px 30px;background:var(--bg);}
+  .doc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:30px;border-bottom:2px solid var(--ink);padding-bottom:16px;}
+  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--blue);font-weight:bold;}
+  h1{font-size:34px;line-height:1.1;margin:8px 0 6px;letter-spacing:-.5px;}
+  .sub{font-size:14px;color:var(--muted);margin:0;}
+  .head-meta{display:flex;gap:26px;padding-top:6px;}
+  .head-meta div{display:flex;flex-direction:column;gap:3px;}
+  .meta-k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);}
+  .meta-v{font-size:12px;font-weight:bold;color:var(--ink);}
+  .section{margin-top:26px;}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;gap:20px;margin-bottom:10px;}
+  h2{font-size:20px;margin:0;letter-spacing:-.2px;}
+  .section-note{font-size:11.5px;color:var(--soft);}
+  .browser{border:1px solid #94a3b8;border-radius:9px;overflow:hidden;background:var(--panel);}
+  .browser-bar{height:34px;background:#e2e8f0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:7px;padding:0 14px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:#94a3b8;}
+  .url{margin-left:14px;font-size:11px;color:#334155;font-family:Consolas,monospace;background:#fff;border:1px solid var(--line);border-radius:4px;padding:3px 10px;}
+  .env{margin-left:auto;font-size:9.5px;letter-spacing:.1em;font-weight:bold;color:#334155;border:1px solid var(--line);border-radius:3px;padding:3px 7px;background:#f8fafc;}
+  .env.ok{color:var(--green);border-color:#a7f3d0;background:var(--green-bg);margin-left:8px;}
+  .admin-body{display:grid;grid-template-columns:280px 1fr;min-height:830px;}
+  .sidebar{background:var(--dark);color:#cbd5e1;padding:16px 14px;display:flex;flex-direction:column;gap:4px;}
+  .brand{color:#fff;font-size:22px;font-weight:900;letter-spacing:.5px;padding:2px 6px 10px;}
+  .brand span{font-size:9px;letter-spacing:.18em;color:#93c5fd;font-weight:bold;display:block;margin-top:2px;}
+  .staff{font-size:10.5px;line-height:1.5;color:#94a3b8;border-top:1px solid #1e293b;border-bottom:1px solid #1e293b;padding:9px 6px;margin-bottom:8px;}
+  .staff b{color:#e2e8f0;}
+  .nav-group{font-size:8.5px;letter-spacing:.14em;color:#64748b;font-weight:bold;margin:9px 6px 3px;}
+  .nav{font-size:11px;padding:5px 8px;border-radius:4px;color:#cbd5e1;display:flex;justify-content:space-between;}
+  .nav.active{background:#1e3a8a;color:#fff;font-weight:bold;}
+  .nav .badge{font-size:9px;color:#fca5a5;font-weight:bold;}
+  .main{padding:14px 16px 12px;background:#f8fafc;}
+  .topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .search{flex:1;height:30px;border:1px solid var(--line);border-radius:5px;background:#fff;color:#94a3b8;font-size:11px;display:flex;align-items:center;padding:0 10px;}
+  .pill{font-size:9.5px;font-weight:bold;border:1px solid var(--line);border-radius:3px;padding:5px 8px;color:#334155;background:#fff;letter-spacing:.06em;}
+  .pill.green{color:var(--green);border-color:#a7f3d0;background:var(--green-bg);}
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:6px;padding:9px 10px;}
+  .kpi-l{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);font-weight:bold;}
+  .kpi-v{font-size:17px;font-weight:900;margin-top:4px;letter-spacing:-.3px;}
+  .kpi-d{font-size:9.5px;margin-top:2px;color:var(--soft);}
+  .kpi-d.up{color:var(--green);}
+  .kpi-d.warn{color:var(--amber);}
+  .kpi-d.bad{color:var(--red);}
+  .grid-2{display:grid;grid-template-columns:1.55fr 1fr;gap:9px;margin-top:9px;}
+  .grid-2b{display:grid;grid-template-columns:1.2fr 1fr;gap:9px;margin-top:9px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:6px;padding:10px 11px;}
+  .card-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;}
+  .card-h b{font-size:11.5px;}
+  .card-h span{font-size:9.5px;color:var(--soft);}
+  table{width:100%;border-collapse:collapse;font-size:9.5px;}
+  th{text-align:left;color:var(--soft);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--line);padding:4px 5px;}
+  td{border-bottom:1px solid var(--line2);padding:5px;vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .tag{display:inline-block;font-size:8.5px;font-weight:bold;border-radius:3px;padding:2px 5px;border:1px solid var(--line);color:#334155;background:#f8fafc;}
+  .tag.green{color:var(--green);border-color:#a7f3d0;background:var(--green-bg);}
+  .tag.amber{color:var(--amber);border-color:#fde68a;background:var(--amber-bg);}
+  .tag.red{color:var(--red);border-color:#fecaca;background:var(--red-bg);}
+  .ops-row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line2);padding:5px 0;font-size:10.5px;color:#334155;}
+  .ops-row:last-child{border-bottom:none;}
+  .ops-row b{font-size:12px;}
+  .dot-s{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px;}
+  .money-list{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:10px;}
+  .money-list div{display:flex;justify-content:space-between;border-bottom:1px solid var(--line2);padding:4px 0;}
+  .money-list b{font-size:11px;}
+  .footnote{font-size:9px;color:var(--soft);margin-top:7px;border-top:1px solid var(--line2);padding-top:5px;}
+  .layer{border:1px solid var(--line);border-radius:7px;background:#fff;padding:9px 11px;margin-top:0;}
+  .layer-label{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--soft);font-weight:bold;margin-bottom:6px;}
+  .layer-sub{font-size:10px;color:var(--soft);margin:-2px 0 6px;}
+  .grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;}
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+  .box{border:1px solid var(--line);border-radius:5px;padding:7px 9px;background:#fff;}
+  .box b{font-size:11.5px;display:block;}
+  .box span{font-size:9.5px;color:var(--soft);display:block;line-height:1.35;margin-top:2px;}
+  .box.blue{background:var(--blue-bg);border-color:#bfdbfe;}
+  .box.green{background:var(--green-bg);border-color:#a7f3d0;}
+  .box.amber{background:var(--amber-bg);border-color:#fde68a;}
+  .box.dark{background:var(--dark);color:#fff;border-color:var(--dark);}
+  .box.dark span{color:#94a3b8;}
+  .api-layer{border:2px solid var(--blue);background:#f8fbff;}
+  .api-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+  .api-grid .box{border-color:#bfdbfe;}
+  .api-note{margin-top:7px;font-size:9.5px;color:var(--blue-ink);background:#dbeafe;border-radius:4px;padding:5px 8px;}
+  .flow-arrow{display:flex;flex-direction:column;align-items:center;margin:3px 0;}
+  .flow-arrow .line{width:2px;height:11px;background:#94a3b8;}
+  .flow-arrow .head{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #94a3b8;}
+  .flow-arrow .lbl{font-size:8.5px;color:var(--soft);margin-top:1px;letter-spacing:.04em;}
+  .notes{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:8px;}
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:4px;padding:7px 9px;}
+  .note b{font-size:10px;display:block;margin-bottom:2px;}
+  .note span{font-size:9px;color:var(--soft);line-height:1.35;display:block;}
+  .money-flow{display:flex;align-items:stretch;gap:0;}
+  .flow-box{flex:1;border:1px solid var(--line);border-radius:5px;padding:9px 10px;background:#fff;}
+  .flow-box b{font-size:12px;display:block;}
+  .flow-box span{font-size:9.5px;color:var(--soft);display:block;margin-top:2px;line-height:1.35;}
+  .flow-box.accent{background:var(--amber-bg);border-color:#fde68a;}
+  .flow-box.green{background:var(--green-bg);border-color:#a7f3d0;}
+  .flow-box.muted{background:#f8fafc;}
+  .arrow-h{display:flex;align-items:center;justify-content:center;width:34px;color:#94a3b8;font-size:18px;font-weight:bold;}
+  .split{flex:1.25;border:1px solid var(--line);border-radius:5px;overflow:hidden;background:#fff;}
+  .split-row{font-size:10px;padding:6px 9px;border-bottom:1px solid var(--line2);display:flex;justify-content:space-between;gap:8px;}
+  .split-row:last-child{border-bottom:none;}
+  .split-row b{font-size:10px;}
+  .split-row.green{background:var(--green-bg);color:var(--green);}
+  .split-row.amber{background:var(--amber-bg);color:var(--amber);}
+  .callout{margin-top:8px;border-left:4px solid var(--amber);background:var(--amber-bg);padding:8px 11px;font-size:10.5px;line-height:1.45;color:#78350f;}
+  .callout.neutral{border-left-color:var(--blue);background:var(--blue-bg);color:var(--blue-ink);}
+  .trust-flow{display:flex;align-items:stretch;gap:0;}
+  .legend{display:flex;gap:24px;align-items:center;margin-top:16px;border-top:1px solid var(--line);padding-top:10px;font-size:9.5px;color:var(--soft);}
+  .legend span{display:flex;align-items:center;gap:6px;}
+  .sw{width:11px;height:11px;border-radius:2px;display:inline-block;}
+  .sw.blue{background:#bfdbfe;border:1px solid var(--blue);}
+  .sw.green{background:#a7f3d0;border:1px solid var(--green);}
+  .sw.amber{background:#fde68a;border:1px solid var(--amber);}
+  .sw.gray{background:#e2e8f0;border:1px solid #94a3b8;}
+  .legend .grow{flex:1;}
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <header class="doc-head">
+    <div>
+      <div class="eyebrow">XYZ · Working design v1.0 · Kenya</div>
+      <h1>Admin control centre and system architecture</h1>
+      <p class="sub">One backend, four interfaces, one ledger. Logical view — not a deployment diagram.</p>
+    </div>
+    <div class="head-meta">
+      <div><span class="meta-k">Status</span><span class="meta-v">Draft for review</span></div>
+      <div><span class="meta-k">Source</span><span class="meta-v">Blueprint + taxonomy</span></div>
+      <div><span class="meta-k">Scope</span><span class="meta-v">Admin · API · data · money · trust</span></div>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>1. Admin control centre</h2>
+      <span class="section-note">Wireframe · every action is capability-checked and written to the audit log</span>
+    </div>
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="url">admin.xyz.local / overview</span>
+        <span class="env">PRODUCTION</span>
+        <span class="env ok">MFA aal2</span>
+      </div>
+      <div class="admin-body">
+        <aside class="sidebar">
+          <div class="brand">XYZ<span>ADMIN CONTROL CENTRE</span></div>
+          <div class="staff"><b>A. Admin</b> · Super admin<br>MFA aal2 · session 42m</div>
+
+          <div class="nav-group">OPERATIONS</div>
+          <div class="nav active">Overview <span class="badge">7</span></div>
+          <div class="nav">Applications &amp; verification <span class="badge">23</span></div>
+          <div class="nav">Users &amp; accounts</div>
+          <div class="nav">Categories &amp; listings <span class="badge">5</span></div>
+          <div class="nav">Orders &amp; bookings</div>
+          <div class="nav">Transport operations <span class="badge">4</span></div>
+
+          <div class="nav-group">FINANCE</div>
+          <div class="nav">Payments &amp; reconciliation</div>
+          <div class="nav">Commissions</div>
+          <div class="nav">Refunds</div>
+          <div class="nav">Payouts <span class="badge">2</span></div>
+
+          <div class="nav-group">TRUST</div>
+          <div class="nav">Disputes <span class="badge">7</span></div>
+          <div class="nav">Reviews</div>
+          <div class="nav">Fraud &amp; risk</div>
+          <div class="nav">Support</div>
+
+          <div class="nav-group">PLATFORM</div>
+          <div class="nav">Service areas</div>
+          <div class="nav">Promotions</div>
+          <div class="nav">Analytics</div>
+          <div class="nav">Audit logs</div>
+          <div class="nav">Platform settings</div>
+        </aside>
+
+        <main class="main">
+          <div class="topbar">
+            <div class="search">Search orders, users, listings, payment references…</div>
+            <span class="pill">ENV · PROD</span>
+            <span class="pill green">MFA aal2</span>
+            <span class="pill">A. ADMIN</span>
+          </div>
+
+          <div class="kpis">
+            <div class="kpi"><div class="kpi-l">GMV today</div><div class="kpi-v">KSh 412,800</div><div class="kpi-d up">+12.4% vs yesterday</div></div>
+            <div class="kpi"><div class="kpi-l">Commission today</div><div class="kpi-v">KSh 41,280</div><div class="kpi-d">10% default · configurable</div></div>
+            <div class="kpi"><div class="kpi-l">Net after PSP fees</div><div class="kpi-v">KSh 33,940</div><div class="kpi-d warn">before support + refunds</div></div>
+            <div class="kpi"><div class="kpi-l">Open disputes</div><div class="kpi-v">7</div><div class="kpi-d bad">2 past SLA</div></div>
+            <div class="kpi"><div class="kpi-l">Pending applications</div><div class="kpi-v">23</div><div class="kpi-d">8 property · 9 transport</div></div>
+            <div class="kpi"><div class="kpi-l">Active riders</div><div class="kpi-v">146</div><div class="kpi-d up">online · eligible for jobs</div></div>
+          </div>
+
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-h"><b>Application review queue</b><span>Oldest first · 23 pending</span></div>
+              <table>
+                <thead><tr><th>Applicant</th><th>Activity / category</th><th>Tier</th><th>Submitted</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td>Grace W.</td><td>Product seller · Hair products</td><td>T1</td><td>12m</td><td><span class="tag">Pending</span></td><td><span class="tag">Review</span></td></tr>
+                  <tr><td>Samuel K.</td><td>Property · Bedsitter</td><td>T2</td><td>38m</td><td><span class="tag amber">Evidence needed</span></td><td><span class="tag">Open</span></td></tr>
+                  <tr><td>Njeri M.</td><td>Service · Hair &amp; beauty</td><td>T1</td><td>1h</td><td><span class="tag">Pending</span></td><td><span class="tag">Review</span></td></tr>
+                  <tr><td>Peter O.</td><td>Transport · Pickup</td><td>T3</td><td>2h</td><td><span class="tag amber">Insurance check</span></td><td><span class="tag">Open</span></td></tr>
+                  <tr><td>Faith A.</td><td>Product · Food &amp; groceries</td><td>T2</td><td>3h</td><td><span class="tag">Pending</span></td><td><span class="tag">Review</span></td></tr>
+                </tbody>
+              </table>
+              <div class="footnote">Activity permissions are category-scoped. Approving “food” never authorises property or transport listings.</div>
+            </div>
+
+            <div class="card">
+              <div class="card-h"><b>Live operations</b><span>Last 15 minutes</span></div>
+              <div class="ops-row"><span><span class="dot-s" style="background:#047857"></span>Active deliveries</span><b>38</b></div>
+              <div class="ops-row"><span><span class="dot-s" style="background:#b45309"></span>Unmatched requests</span><b>4</b></div>
+              <div class="ops-row"><span><span class="dot-s" style="background:#b91c1c"></span>Late deliveries</span><b>2</b></div>
+              <div class="ops-row"><span><span class="dot-s" style="background:#047857"></span>Payment webhook lag</span><b>1.2s</b></div>
+              <div class="ops-row"><span><span class="dot-s" style="background:#047857"></span>Reconciliation</span><b>Balanced</b></div>
+              <div class="ops-row"><span><span class="dot-s" style="background:#047857"></span>API p95</span><b>240ms</b></div>
+              <div class="ops-row"><span><span class="dot-s" style="background:#b45309"></span>Queue backlog</span><b>12</b></div>
+            </div>
+          </div>
+
+          <div class="grid-2b">
+            <div class="card">
+              <div class="card-h"><b>Money movement today</b><span>KSh · settled and pending</span></div>
+              <div class="money-list">
+                <div><span>Collected</span><b>412,800</b></div>
+                <div><span>Held in settlement</span><b>96,400</b></div>
+                <div><span>Commission</span><b>41,280</b></div>
+                <div><span>Provider payouts due</span><b>268,900</b></div>
+                <div><span>Refunds</span><b>6,220</b></div>
+                <div><span>Payout failures</span><b>0</b></div>
+              </div>
+              <div class="footnote">Operating account receives commission only. Customer funds sit with the licensed PSP/bank until payout or refund.</div>
+            </div>
+
+            <div class="card">
+              <div class="card-h"><b>Trust &amp; safety</b><span>Today</span></div>
+              <div class="ops-row"><span>Listing reports</span><b>14</b></div>
+              <div class="ops-row"><span>Confirmed violations</span><b>3</b></div>
+              <div class="ops-row"><span>Appeals open</span><b>2</b></div>
+              <div class="ops-row"><span>Suspended accounts</span><b>1</b></div>
+              <div class="ops-row"><span>Average rating</span><b>4.7 / 5</b></div>
+              <div class="footnote">Ratings are optional. They inform ranking and risk signals; they never gate completion or payout.</div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>2. System architecture</h2>
+      <span class="section-note">Modular monolith first · boundaries are logical, not separate deployments</span>
+    </div>
+
+    <div class="layer">
+      <div class="layer-label">Clients</div>
+      <div class="grid-5">
+        <div class="box"><b>Public web</b><span>SEO · browse · listings · provider profiles</span></div>
+        <div class="box"><b>Customer PWA</b><span>orders · bookings · tracking · messages · reviews</span></div>
+        <div class="box"><b>Provider dashboard</b><span>applications · listings · orders · earnings</span></div>
+        <div class="box"><b>Rider PWA / app</b><span>availability · offers · navigation · proof</span></div>
+        <div class="box blue"><b>Admin console</b><span>staff · MFA · capabilities · queues · audit</span></div>
+      </div>
+    </div>
+
+    <div class="flow-arrow"><span class="line"></span><span class="head"></span><span class="lbl">HTTPS · JSON · authenticated session</span></div>
+
+    <div class="layer">
+      <div class="layer-label">Edge</div>
+      <div class="grid-3">
+        <div class="box"><b>CDN + WAF</b><span>TLS · caching · bot and abuse filtering</span></div>
+        <div class="box"><b>API gateway</b><span>routing · rate limits · schema validation · request IDs</span></div>
+        <div class="box blue"><b>Session + MFA</b><span>customer session · staff step-up · capability claims</span></div>
+      </div>
+    </div>
+
+    <div class="flow-arrow"><span class="line"></span><span class="head"></span><span class="lbl">authorised request · capability checked server-side</span></div>
+
+    <div class="layer api-layer">
+      <div class="layer-label">XYZ API — modular monolith</div>
+      <div class="layer-sub">One deployable with enforced module boundaries. Each module owns its rules, data access, and tests.</div>
+      <div class="api-grid">
+        <div class="box"><b>Identity &amp; permissions</b><span>accounts · sessions · roles · activities · capabilities</span></div>
+        <div class="box"><b>Catalogue &amp; category engine</b><span>divisions · categories · field schemas · activation</span></div>
+        <div class="box"><b>Applications &amp; verification</b><span>dossiers · evidence · tiers T0–T3 · decisions</span></div>
+        <div class="box"><b>Listings &amp; search</b><span>drafts · media · publication · FTS / trigram</span></div>
+        <div class="box"><b>Orders / bookings / quotes</b><span>one spine · per-vertical states · idempotency</span></div>
+        <div class="box"><b>Delivery matching &amp; tracking</b><span>offers · atomic claim · proof · inter-town handoff</span></div>
+        <div class="box"><b>Payments / ledger / payouts</b><span>events · double-entry · split · refunds · reserves</span></div>
+        <div class="box"><b>Messaging &amp; notifications</b><span>threads · preferences · retries · channel adapters</span></div>
+        <div class="box"><b>Reviews &amp; disputes</b><span>verified reviews · evidence · outcomes · appeals</span></div>
+        <div class="box"><b>Admin &amp; audit</b><span>staff capabilities · queues · append-only log</span></div>
+        <div class="box"><b>Analytics</b><span>GMV vs revenue · funnels · operations</span></div>
+        <div class="box green"><b>Domain rules (pure)</b><span>commission · eligibility · state machines · money</span></div>
+      </div>
+      <div class="api-note">Every mutation: capability check → domain rule → database transaction → audit event. Payment and assignment operations are idempotent.</div>
+    </div>
+
+    <div class="flow-arrow"><span class="line"></span><span class="head"></span><span class="lbl">durable jobs / outbox events</span></div>
+
+    <div class="layer">
+      <div class="layer-label">Workers</div>
+      <div class="grid-5">
+        <div class="box"><b>Notification worker</b><span>email · SMS · push · retries · dead-letter</span></div>
+        <div class="box"><b>Payment-event worker</b><span>verify · dedupe · reconcile · replay-safe</span></div>
+        <div class="box"><b>Matching worker</b><span>offers · expiry · reassignment · no double claim</span></div>
+        <div class="box"><b>Overdue &amp; reconciliation</b><span>deadlines · daily close · exception queue</span></div>
+        <div class="box"><b>Payout worker</b><span>batches · retries · reserves · negative balances</span></div>
+      </div>
+    </div>
+
+    <div class="flow-arrow"><span class="line"></span><span class="head"></span><span class="lbl">reads / writes through scoped repositories</span></div>
+
+    <div class="layer">
+      <div class="layer-label">Data</div>
+      <div class="grid-5">
+        <div class="box"><b>PostgreSQL</b><span>RLS · orders · ledger · snapshots · constraints</span></div>
+        <div class="box"><b>Redis</b><span>cache · locks · queues · rate counters</span></div>
+        <div class="box"><b>Object storage</b><span>private KYC documents · listing media · signed URLs</span></div>
+        <div class="box"><b>Search index</b><span>Postgres FTS + trigram · category filters</span></div>
+        <div class="box"><b>Audit store</b><span>append-only events · staff actions · payment events</span></div>
+      </div>
+    </div>
+
+    <div class="flow-arrow"><span class="line"></span><span class="head"></span><span class="lbl">signed, logged outbound calls</span></div>
+
+    <div class="layer">
+      <div class="layer-label">External integrations</div>
+      <div class="grid-4">
+        <div class="box"><b>Safaricom M-PESA (Daraja)</b><span>STK push · C2B · B2C / B2B · callbacks</span></div>
+        <div class="box"><b>Bank / licensed PSP</b><span>collection · settlement · payouts · reconciliation</span></div>
+        <div class="box"><b>Maps / geocoding</b><span>service areas · ETA · delivery tracking</span></div>
+        <div class="box"><b>SMS / email / push</b><span>transactional notifications · OTP</span></div>
+        <div class="box"><b>KYC / ID verification</b><span>ID · business · vehicle · licence checks</span></div>
+        <div class="box"><b>Insurance partner</b><span>goods in transit · rider / passenger liability</span></div>
+        <div class="box"><b>Object storage / CDN</b><span>media delivery · private document access</span></div>
+        <div class="box amber"><b>Legal / regulatory gate</b><span>ODPC · PSP licensing · NTSA · county · tax</span></div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note"><b>Trust boundary</b><span>Browser is untrusted. RLS is the last line, not the only line. Every mutation is re-authorised server-side.</span></div>
+      <div class="note"><b>Money boundary</b><span>Customer funds sit with the licensed PSP/bank. The XYZ operating account receives commission only.</span></div>
+      <div class="note"><b>Event integrity</b><span>Webhooks are signature-verified, replay-safe, reconciled daily, and never trusted from screenshots.</span></div>
+      <div class="note"><b>Document privacy</b><span>KYC evidence is private, signed-URL only, access-logged, retention-bound, and never exposed to ordinary users.</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>3. Money and settlement</h2>
+      <span class="section-note">Collection → segregated settlement → commission / payout / refund</span>
+    </div>
+    <div class="money-flow">
+      <div class="flow-box"><b>Customer pays</b><span>M-PESA STK push or bank / card through the PSP</span></div>
+      <div class="arrow-h">→</div>
+      <div class="flow-box"><b>PSP collection</b><span>Licensed provider verifies and confirms the payment</span></div>
+      <div class="arrow-h">→</div>
+      <div class="flow-box accent"><b>Segregated settlement</b><span>PSP / bank account. Not the XYZ operating account.</span></div>
+      <div class="arrow-h">→</div>
+      <div class="split">
+        <div class="split-row green"><span>XYZ commission (10% default)</span><b>→ operating</b></div>
+        <div class="split-row"><span>Provider payout</span><b>→ M-PESA / bank</b></div>
+        <div class="split-row amber"><span>Refund</span><b>→ customer</b></div>
+      </div>
+    </div>
+    <div class="callout">Holding funds, delayed payout, and any escrow-like behaviour depend on the licensed provider and Kenyan legal requirements. Until that is signed off, launch transaction categories as enquiry-only. “10%” is confirmed; the base, payer, rounding, and low-ticket floor still need a written rule.</div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>4. Transaction and trust loop</h2>
+      <span class="section-note">Delivery proof releases payout eligibility; rating is optional</span>
+    </div>
+    <div class="trust-flow">
+      <div class="flow-box"><b>Order / booking confirmed</b><span>price, fees, and commission snapshot stored</span></div>
+      <div class="arrow-h">→</div>
+      <div class="flow-box"><b>Fulfilment + proof</b><span>PIN · recipient · photo · service confirmation</span></div>
+      <div class="arrow-h">→</div>
+      <div class="flow-box"><b>Dispute window</b><span>category-specific policy and evidence</span></div>
+      <div class="arrow-h">→</div>
+      <div class="flow-box green"><b>Payout eligible</b><span>ledger entries become payable to the provider</span></div>
+      <div class="arrow-h">→</div>
+      <div class="flow-box muted"><b>Optional rating</b><span>informs ranking and risk, never gates money</span></div>
+    </div>
+    <div class="callout neutral">A customer cannot withhold payment by refusing to rate, and a provider cannot demand a rating to complete a job. Disputes are the mechanism for withholding money, not stars.</div>
+  </section>
+
+  <footer class="legend">
+    <span><i class="sw blue"></i>request / control path</span>
+    <span><i class="sw green"></i>money or payout</span>
+    <span><i class="sw amber"></i>policy / legal gate</span>
+    <span><i class="sw gray"></i>data / storage</span>
+    <span class="grow"></span>
+    <span>XYZ · working design v1.0 · not a deployment diagram</span>
+  </footer>
+
+</div>
+</body>
+</html>

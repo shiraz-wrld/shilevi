@@ -1,0 +1,4 @@
+import { requireOwnerAdmin } from "@/lib/admin/auth";
+import AdminBrandsClient from "./AdminBrandsClient";
+export const dynamic = "force-dynamic";
+export default async function AdminBrandsPage(){const access=await requireOwnerAdmin();if(!access.authorized)return <main className="min-h-screen bg-slate-50 p-8"><h1 className="text-2xl font-black">Access denied</h1><p className="mt-3 text-slate-600">Only the verified owner accounts can manage brands.</p></main>;if(access.mfaLevel!=="aal2")return <main className="min-h-screen bg-slate-50 p-8"><h1 className="text-2xl font-black">Owner MFA required</h1><p className="mt-3 max-w-xl leading-7 text-slate-600">Brand changes require an authenticated owner session with MFA assurance level 2. Enroll and verify an authenticator in your Supabase Auth settings, then sign in again.</p></main>;return <AdminBrandsClient/>;}

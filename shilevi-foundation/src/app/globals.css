@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --background: #f7f9fc;
+  --foreground: #0b1730;
+  --primary: #1456d9;
+  --primary-soft: #e8f0ff;
+  --sky: #35b6f2;
+  --surface: #ffffff;
+  --muted: #66758f;
+  --border: #dfe6f1;
+}
+
+* { box-sizing: border-box; }
+
+html { min-height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+a { color: inherit; text-decoration: none; }
+
+button, input, select, textarea { font: inherit; }
