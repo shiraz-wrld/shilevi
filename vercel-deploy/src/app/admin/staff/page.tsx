@@ -2,8 +2,9 @@ import "server-only";
 
 import type { Metadata } from "next";
 import { requireOwnerAdmin } from "@/lib/admin/auth";
+import { describeAdminReadFailure } from "@/lib/admin/errors";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AdminAccessDenied, AdminShell } from "@/components/admin/AdminShell";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { StaffManager } from "./StaffManager";
 
 export const metadata: Metadata = {
@@ -23,7 +24,6 @@ type StaffRow = {
 
 export default async function AdminStaffPage() {
   const result = await requireOwnerAdmin();
-  if (!result.authorized) return <AdminAccessDenied reason={result.reason} />;
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("admin_list_staff");
@@ -38,8 +38,7 @@ export default async function AdminStaffPage() {
     >
       {error ? (
         <p role="alert" className="rounded-2xl border border-amber-800 bg-amber-950/40 p-5 text-sm leading-6 text-amber-100">
-          Staff capabilities could not be read. Apply migration 0021 and confirm MFA level 2.
-        </p>
+          {describeAdminReadFailure("Staff capabilities", error)} Nothing was changed.</p>
       ) : (
         <StaffManager initialRows={rows} ownerEmail={result.user.email ?? ""} />
       )}

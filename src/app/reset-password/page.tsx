@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { AuthShell } from "@/components/auth/AuthShell";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -27,16 +28,44 @@ export default function ResetPasswordPage() {
     } finally { setBusy(false); }
   }
 
-  return <main className="flex min-h-screen items-center justify-center bg-slate-50 px-5 py-12"><section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
-    <Link href="/" className="text-2xl font-black text-blue-700">shilevi</Link>
-    <h1 className="mt-8 text-3xl font-black">Choose a new password</h1>
-    <p className="mt-2 text-slate-600">Open this page from the secure link in your password-reset email. Use at least 10 characters.</p>
-    <form onSubmit={submit} className="mt-7 space-y-4">
-      <label className="block text-sm font-semibold">New password<input required minLength={10} maxLength={128} type="password" autoComplete="new-password" value={password} onChange={event=>setPassword(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600" /></label>
-      <label className="block text-sm font-semibold">Confirm new password<input required minLength={8} maxLength={128} type="password" autoComplete="new-password" value={confirmPassword} onChange={event=>setConfirmPassword(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600" /></label>
-      <button disabled={busy || saved} className="w-full rounded-xl bg-blue-700 px-4 py-3 font-bold text-white disabled:opacity-60">{busy ? "Updating…" : "Update password"}</button>
-      {message && <p role={saved ? "status" : "alert"} className="text-sm text-slate-700">{message}</p>}
-    </form>
-    {saved && <Link className="mt-5 inline-block font-semibold text-blue-700" href="/login">Go to sign in</Link>}
-  </section></main>;
+  return (
+    <AuthShell
+      title="Choose a new password"
+      subtitle="Open this page from the secure link in your password-reset email. Use at least 10 characters."
+      footer={
+        saved ? (
+          <p>
+            <Link className="font-semibold text-brand-800 underline underline-offset-2" href="/login">
+              Continue to sign in
+            </Link>
+          </p>
+        ) : (
+          <p>
+            <Link className="font-semibold text-brand-800 underline underline-offset-2" href="/forgot-password">
+              Request a new link
+            </Link>
+          </p>
+        )
+      }
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <label className="field-label">
+          New password
+          <input required minLength={10} maxLength={128} type="password" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} className="field mt-1.5 font-normal" />
+        </label>
+        <label className="field-label">
+          Confirm new password
+          <input required minLength={10} maxLength={128} type="password" autoComplete="new-password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} className="field mt-1.5 font-normal" />
+        </label>
+        <button disabled={busy || saved} className="btn btn-primary w-full">
+          {busy ? "Updating…" : "Update password"}
+        </button>
+        {message && (
+          <p role={saved ? "status" : "alert"} className={saved ? "notice notice-success" : "notice notice-error"}>
+            {message}
+          </p>
+        )}
+      </form>
+    </AuthShell>
+  );
 }

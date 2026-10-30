@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { requireUser } from "@/lib/auth/guards";
+import { LivePositionSharing } from "@/components/deliver/LivePositionSharing";
 
 export const metadata: Metadata = {
   title: "Rider workspace",
@@ -64,12 +65,20 @@ export default async function RiderHomePage() {
           </Link>
         </div>
 
-        <section className="mt-10 rounded-2xl border border-amber-200 bg-amber-50 p-6">
-          <h2 className="text-xl font-black text-amber-950">What still depends on configuration</h2>
+        <div className="mt-10">
+          <LivePositionSharing />
+        </div>
+
+        <section className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-6">
+          <h2 className="text-xl font-black text-amber-950">What the map does and does not do</h2>
           <p className="mt-2 leading-7 text-amber-950">
-            Live rider tracking, route optimisation and automatic M-Pesa B2C payouts require external configuration.
-            Withdrawals are recorded and remain pending until the payout provider confirms them. The job board shows the
-            records the database actually holds, and no live map is implied.
+            The map plots real coordinates: the point your own device reports while sharing is on, and the pickup and
+            destination recorded on a passenger trip. Shilevi draws no route, distance or arrival estimate because no
+            routing service is configured, and it will not show a number it cannot compute.
+          </p>
+          <p className="mt-2 leading-7 text-amber-950">
+            Automatic M-Pesa B2C payouts still require external configuration. Withdrawals are recorded and remain
+            pending until the payout provider confirms them.
           </p>
         </section>
       </main>

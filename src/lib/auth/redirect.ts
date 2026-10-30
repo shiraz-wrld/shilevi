@@ -17,11 +17,14 @@
  * the database RLS still apply); this helper only prevents open redirects and lost destinations.
  */
 
+// `/deliver` and `/provider/apply` are here because registration sends a new provider-intent
+// account to the matching application; without them the destination was silently replaced.
 const ALLOWED_PREFIXES = [
   "/account",
   "/admin",
   "/cart",
   "/checkout",
+  "/deliver",
   "/house-hunt",
   "/onboarding",
   "/provider",

@@ -3,7 +3,7 @@ import "server-only";
 import type { Metadata } from "next";
 import { requireOwnerAdmin } from "@/lib/admin/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AdminAccessDenied, AdminShell } from "@/components/admin/AdminShell";
+import { AdminShell } from "@/components/admin/AdminShell";
 
 export const metadata: Metadata = {
   title: "Audit log",
@@ -34,7 +34,6 @@ function summarizeMetadata(metadata: Record<string, unknown> | null) {
 
 export default async function AdminAuditLogPage() {
   const result = await requireOwnerAdmin();
-  if (!result.authorized) return <AdminAccessDenied reason={result.reason} />;
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -54,8 +53,7 @@ export default async function AdminAuditLogPage() {
     >
       {error ? (
         <p role="alert" className="rounded-2xl border border-amber-800 bg-amber-950/40 p-5 text-sm leading-6 text-amber-100">
-          The audit log could not be read. Apply reviewed migration 0019 to grant the owner read policy, then reload.
-        </p>
+          The audit log could not be read. Nothing was changed. Reload once; if it persists, System health reports whether the cause is a missing migration, an MFA session or a missing capability.</p>
       ) : rows.length === 0 ? (
         <p className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-sm leading-6 text-slate-300">
           No audit events recorded yet. Category, brand, listing and provider-application changes appear here once review

@@ -3,7 +3,8 @@ import "server-only";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireOwnerAdmin } from "@/lib/admin/auth";
-import { AdminAccessDenied, AdminShell } from "@/components/admin/AdminShell";
+import { describeAdminReadFailure } from "@/lib/admin/errors";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { providerReadinessReport, payoutReadiness, type PaymentProviderId } from "@/lib/payments/providers";
 import { PaymentMethodSettings } from "./PaymentMethodSettings";
@@ -19,16 +20,22 @@ type MethodRow = { provider: string; enabled: boolean };
 
 export default async function PaymentMethodsPage() {
   const access = await requireOwnerAdmin();
-  if (!access.authorized) return <AdminAccessDenied reason={access.reason} />;
   if (access.mfaLevel !== "aal2") {
     return (
-      <main className="min-h-screen bg-slate-50 p-8">
-        <h1 className="text-2xl font-black">Owner MFA required</h1>
-        <p className="mt-3 max-w-xl leading-7 text-slate-600">
-          Payment configuration requires an owner session with MFA assurance level 2. Enroll an
-          authenticator in Supabase Auth, verify it, then sign in again.
+      <AdminShell
+        email={access.user.email ?? null}
+        mfaLevel={access.mfaLevel}
+        title="Payment methods require MFA"
+        description="Payment configuration decides what customers can be charged with, so it requires an owner session at MFA assurance level 2."
+      >
+        <p className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5 text-sm leading-6 text-amber-100">
+          Enroll an authenticator in{" "}
+          <Link href="/admin/security" className="font-bold underline">
+            Security
+          </Link>
+          , verify it, then sign in again. No payment method was changed.
         </p>
-      </main>
+      </AdminShell>
     );
   }
 
@@ -43,16 +50,17 @@ export default async function PaymentMethodsPage() {
 
   if (methodResult.error) {
     return (
-      <main className="min-h-screen bg-slate-50 p-8">
-        <h1 className="text-2xl font-black">Payment methods are unavailable</h1>
-        <p className="mt-3 max-w-xl leading-7 text-slate-600">
-          The payment-method registry could not be read. Apply migration 0023, confirm MFA level 2,
-          and try again. No payment setting was changed.
+      <AdminShell
+        email={access.user.email ?? null}
+        mfaLevel={access.mfaLevel}
+        title="Payment methods are unavailable"
+        description="The payment-method registry could not be read, so no method can be trusted or changed from here."
+      >
+        <p role="alert" className="rounded-2xl border border-amber-800 bg-amber-950/40 p-5 text-sm leading-6 text-amber-100">
+          {describeAdminReadFailure("The payment-method registry", methodResult.error)} No payment
+          setting was changed.
         </p>
-        <Link href="/admin/payments" className="mt-6 inline-flex font-semibold text-blue-700">
-          ← Back to payments
-        </Link>
-      </main>
+      </AdminShell>
     );
   }
 

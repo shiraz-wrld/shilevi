@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatMoney } from "@/lib/money";
 import { DELIVERY_STATUS_LABELS, nextRiderAction } from "@/lib/order-status";
+import { LiveTrackingCard } from "@/components/tracking/LiveTrackingCard";
 
 type RiderOrder = { order_number: string; status: string; delivery_method: string; contact_phone: string | null; notes: string | null };
 type Delivery = {
@@ -65,10 +66,30 @@ export default function RiderJobDetailPage() {
     setBusy(to); setError(""); setMessage("");
     try {
       const db = createSupabaseBrowserClient();
+
+      if (to === "delivered") {
+        // Verify in its own call so a wrong guess is counted; see migration 0034.
+        const { data: outcome, error: verifyError } = await db.rpc("verify_delivery_proof_code", {
+          p_delivery_id: delivery.id,
+          p_code: proofCode.trim(),
+        });
+        if (verifyError) throw verifyError;
+        if (outcome !== "verified") {
+          setError(
+            outcome === "locked"
+              ? "Too many incorrect codes. This delivery is locked for 15 minutes; contact support before trying again."
+              : outcome === "used"
+                ? "This delivery has already been confirmed."
+                : "That confirmation code is not correct. Ask the customer to read it again.",
+          );
+          return;
+        }
+      }
+
       const result = await db.rpc("rider_update_delivery", {
         p_delivery_id: delivery.id,
         p_to_status: to,
-        p_proof_code: to === "delivered" ? proofCode.trim() : null,
+        p_proof_code: null,
         p_note: to === "delivered" ? "Handover code confirmed with the customer." : label,
       });
       if (result.error) throw result.error;
@@ -141,6 +162,8 @@ export default function RiderJobDetailPage() {
         </div>
 
         <aside className="h-fit space-y-4">
+          <LiveTrackingCard kind="delivery" id={delivery.id} title="Route map" />
+
           <section className="rounded-3xl border border-slate-200 bg-white p-6">
             <h2 className="text-lg font-black">Next step</h2>
             {action ? <button onClick={() => void advance(action.to, action.label)} disabled={Boolean(busy)} className="mt-4 w-full rounded-xl bg-blue-700 px-5 py-3 font-bold text-white disabled:opacity-50">{busy === action.to ? "Updating…" : action.label}</button> : <p className="mt-4 text-sm leading-6 text-slate-600">{delivery.status === "delivered" ? "This delivery is complete. The customer can confirm receipt in their order." : delivery.status === "failed" ? "This delivery was marked failed. Contact support if you need help." : "No rider action is available for this job right now."}</p>}

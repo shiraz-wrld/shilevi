@@ -132,7 +132,7 @@ async function auditLegal() {
 }
 
 async function auditPrivateAreas() {
-  for (const path of ["/account", "/cart", "/checkout", "/provider", "/provider/properties", "/rider", "/rider/rides", "/admin", "/admin/insights", "/onboarding"]) {
+  for (const path of ["/account", "/account/notifications", "/account/orders", "/cart", "/checkout", "/provider", "/provider/properties", "/rider", "/rider/rides", "/onboarding"]) {
     const { response, text } = await get(path);
     const redirected = response.status >= 300 && response.status < 400;
     record(`PRIVATE ${path}`, redirectValue(response) || response.status === 200, `status ${response.status}`);
@@ -147,12 +147,39 @@ async function auditPrivateAreas() {
     record(`  ${path} X-Robots-Tag`, (response.headers.get("x-robots-tag") || "").includes("noindex"), response.headers.get("x-robots-tag") || "missing");
   }
 
-  const { response } = await get("/admin");
-  if (response.status === 200) {
-    record("/admin fails closed without a session", /not configured|Access denied/i.test((await get("/admin")).text), "admin page did not show a denial");
-  } else {
-    record("/admin fails closed without a session", response.status >= 300 && response.status < 400, `status ${response.status}`);
+  // The owner console must be indistinguishable from a missing route for anyone who is not an
+  // authorized owner. A 404 is required: a redirect to an admin login, a 403 or an "Access denied"
+  // page would all confirm that the console exists and that it is worth attacking.
+  for (const path of ["/admin", "/admin/insights", "/admin/staff", "/admin/security", "/admin/system-health", "/admin/nope"]) {
+    const { response, text } = await get(path);
+    record(`CONCEALED ${path}`, response.status === 404, `status ${response.status}`);
+    record(
+      `  ${path} reveals no admin surface`,
+      !/access denied|owner control center|owner control centre|staff access|owner allowlist|not authorized/i.test(text),
+      "admin surface or allowlist leaked",
+    );
+    record(`  ${path} X-Robots-Tag`, (response.headers.get("x-robots-tag") || "").includes("noindex"), response.headers.get("x-robots-tag") || "missing");
   }
+
+  // Privileged endpoints answer unauthorized callers the way a missing route would.
+  const refundProbe = await get("/api/admin/refunds/decide", {
+    method: "POST",
+    headers: { origin: BASE, "content-type": "application/json" },
+    body: JSON.stringify({ refundId: "00000000-0000-4000-8000-000000000000", approve: true }),
+  });
+  record(
+    "admin refund API concealed or unconfigured",
+    refundProbe.response.status === 404 || refundProbe.response.status === 503,
+    `status ${refundProbe.response.status}`,
+  );
+  record(
+    "admin refund API names no audience",
+    !/allowlist|owner|mfa|authenticator/i.test(refundProbe.text),
+    "refund API revealed its authorization model",
+  );
+
+  const payoutProbe = await get("/api/payments/payouts/dispatch");
+  record("payout dispatch API concealed", payoutProbe.response.status === 404, `status ${payoutProbe.response.status}`);
 }
 
 function redirectValue(response) {
@@ -273,11 +300,43 @@ async function auditInternalLinks() {
   record(`home page internal links (${Math.min(hrefs.size, 60)} checked)`, broken === 0, `${broken} broken`);
 }
 
+/**
+ * Registration must offer every supported account path as a real choice, and must not offer one the
+ * platform cannot onboard. This reads the rendered HTML rather than the source, so a broken build —
+ * a client component that throws, a table that fails to render — is what fails here.
+ */
+async function auditSignupPaths() {
+  const { text } = await get("/signup");
+  const expected = [
+    ["Buy and book", "customer"],
+    ["Sell products or food", "product_seller"],
+    ["Offer a service", "service_provider"],
+    ["Deliver goods", "delivery_rider"],
+    ["Carry passengers", "transport_operator"],
+    ["List property", "property_provider"],
+  ];
+  record("/signup asks how the account will be used", /How will you use Shilevi\?/.test(text), "question missing");
+  for (const [label, value] of expected) {
+    record(
+      `/signup offers ${value}`,
+      text.includes(`value="${value}"`) && text.includes(label),
+      "option missing",
+    );
+  }
+  record(
+    "/signup keeps provider work an application, not a grant",
+    /separate application Shilevi reviews first/i.test(text),
+    "no disclosure that approval is separate",
+  );
+  record("/signup keeps one customer registration form", /autocomplete="email"/i.test(text), "email field missing");
+}
+
 async function main() {
   console.log(`Route audit against ${BASE}\n`);
   try {
     await auditPublicRoutes();
     await auditLegal();
+    await auditSignupPaths();
     await auditSearchNoindex();
     await auditPrivateAreas();
     await auditEndpoints();

@@ -14,13 +14,17 @@ type Row = {
 };
 
 function friendlyError(message: string) {
-  if (/not authorized|permission denied/i.test(message)) {
-    return "Your owner session is not authorized. Sign in again with MFA and retry.";
+  const text = message.toLowerCase();
+  if (/aal2|mfa|assurance/.test(text)) {
+    return "Payment changes need a session at MFA level 2. Verify your authenticator, then retry. Nothing was changed.";
   }
-  if (/migration|does not exist|schema/i.test(message)) {
-    return "The payment registry is not available. Apply migration 0023 first.";
+  if (/not authorized|permission denied/.test(text)) {
+    return "This account is not permitted to change payment methods. Nothing was changed.";
   }
-  return message;
+  if (/could not find the function|schema cache|does not exist/.test(text)) {
+    return "Payment methods cannot be changed because the payment registry function is not installed on this database. Nothing was changed.";
+  }
+  return "The payment method could not be changed. Nothing was changed; reload and try again.";
 }
 
 export function PaymentMethodSettings({ rows }: { rows: Row[] }) {

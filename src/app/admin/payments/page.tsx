@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireStaffCapability } from "@/lib/admin/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AdminAccessDenied, AdminShell } from "@/components/admin/AdminShell";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { formatMoney } from "@/lib/money";
 import { isMpesaB2cConfigured, isMpesaConfigured } from "@/lib/env.server";
 import { PayoutDispatch } from "./PayoutDispatch";
@@ -51,7 +51,6 @@ function sum(rows: LedgerRow[], predicate: (row: LedgerRow) => boolean): number 
 
 export default async function AdminPaymentsPage() {
   const result = await requireStaffCapability("finance.read");
-  if (!result.authorized) return <AdminAccessDenied reason={result.reason} />;
 
   const supabase = await createSupabaseServerClient();
   const [intentResult, payoutResult, ledgerResult, unlockResult] = await Promise.all([
@@ -115,9 +114,8 @@ export default async function AdminPaymentsPage() {
 
       {(intentResult.error || payoutResult.error || ledgerResult.error) && (
         <p role="alert" className="mt-5 rounded-2xl border border-amber-800 bg-amber-950/40 p-5 text-sm leading-6 text-amber-100">
-          Some financial records could not be read. Apply migration 0021 and confirm MFA level 2. Do not make payout
-          decisions from an incomplete view.
-        </p>
+          Some financial records could not be read. Nothing was changed. Reload once; if it persists, System health reports whether the cause is a missing migration, an MFA session or a missing capability. Do not make payout
+          decisions from an incomplete view.</p>
       )}
 
       <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-5">

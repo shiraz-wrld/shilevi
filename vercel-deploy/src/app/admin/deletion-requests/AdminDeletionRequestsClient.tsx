@@ -76,13 +76,12 @@ export default function AdminDeletionRequestsClient() {
     }
   }
 
-  return <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6 sm:py-12">
-    <div className="mx-auto max-w-6xl">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div><Link href="/admin" className="text-sm font-semibold text-blue-300">← Admin control center</Link><h1 className="mt-3 text-3xl font-black sm:text-4xl">Account deletion requests</h1></div>
+  return <div className="space-y-5 text-white">
+    <div>
+      <div className="flex justify-end">
         <button onClick={() => void load()} disabled={loading} className="rounded-full border border-slate-700 px-4 py-2 text-sm font-bold hover:bg-slate-900 disabled:opacity-50">Refresh</button>
-      </header>
-      <p className="mt-4 max-w-3xl leading-7 text-slate-300">Owner-only review queue. Use the least data necessary. Closing a request is an administrative record—not proof that Auth, uploaded files, provider content, or retained financial records have been deleted.</p>
+      </div>
+      <p className="mt-2 max-w-3xl leading-7 text-slate-300">Owner-only review queue. Use the least data necessary. Closing a request is an administrative record—not proof that Auth, uploaded files, provider content, or retained financial records have been deleted.</p>
       <div className="mt-6 rounded-2xl border border-amber-800 bg-amber-950/40 p-4 text-sm leading-6 text-amber-100">Never mark a request completed until the applicable deletion and retention work is actually finished. This page does not perform destructive account deletion.</div>
       {error && <p role="alert" className="mt-5 rounded-xl border border-red-800 bg-red-950 p-4 text-sm text-red-100">{error}</p>}
       {notice && <p role="status" className="mt-5 rounded-xl border border-emerald-800 bg-emerald-950 p-4 text-sm text-emerald-100">{notice}</p>}
@@ -110,5 +109,5 @@ export default function AdminDeletionRequestsClient() {
       </div>}
       <p className="mt-8 text-xs leading-5 text-slate-500">Privacy: this queue shows account IDs, not emails, phone numbers, or profile contents. Contact the account holder through an approved support workflow; do not copy identifiers into public channels.</p>
     </div>
-  </main>;
+  </div>;
 }

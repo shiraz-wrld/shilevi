@@ -29,5 +29,17 @@ export async function GET(request: NextRequest) {
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) return NextResponse.redirect(new URL("/login?error=auth_callback", requestUrl.origin));
+
+  // OAuth and email-link sign-ins are also aal1. If the account has a verified authenticator, send
+  // the browser through the same TOTP challenge the password form uses.
+  const { data: assurance } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (assurance?.nextLevel === "aal2" && assurance.currentLevel !== "aal2") {
+    const stepUp = NextResponse.redirect(
+      new URL(`/login/mfa?next=${encodeURIComponent(safeNext)}`, requestUrl.origin),
+    );
+    for (const cookie of response.cookies.getAll()) stepUp.cookies.set(cookie);
+    return stepUp;
+  }
+
   return response;
 }

@@ -3,6 +3,8 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 
 type Category = { id: string; name: string; division: string };
 type Location = { county: string };
@@ -273,27 +275,18 @@ export default function MarketplaceSearchPage() {
   const activeFilterCount = [division, category, county, min, max].filter(Boolean).length;
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
-          <Link href="/" className="text-2xl font-black text-blue-700">shilevi</Link>
-          <nav className="flex items-center gap-4 text-sm font-semibold text-blue-700">
-            <Link href="/marketplace/products">Products</Link>
-            <Link href="/house-hunt">House Hunt</Link>
-            <Link href="/account">My account</Link>
-          </nav>
-        </div>
-      </header>
+    <div className="flex min-h-screen flex-col bg-mist-50 text-ink-900">
+      <SiteHeader />
 
-      <div className="mx-auto max-w-6xl px-5 py-10 sm:py-14">
-        <p className="text-sm font-bold uppercase tracking-wide text-blue-700">Find what you need</p>
+      <div className="mx-auto w-full max-w-6xl flex-1 px-5 py-10 sm:py-14">
+        <p className="eyebrow">Find what you need</p>
         <h1 className="mt-2 text-3xl font-black sm:text-4xl">Search Shilevi</h1>
         <p className="mt-3 max-w-2xl leading-7 text-slate-600">
           Search published products, services, transport and property listings. Results show public
           details only; House Hunt contact information always requires the paid unlock on the listing.
         </p>
 
-        <form onSubmit={submit} className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
+        <form onSubmit={submit} className="surface mt-7 p-5 sm:p-7">
           <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <label className="block text-sm font-bold">
               What are you looking for?
@@ -559,6 +552,7 @@ export default function MarketplaceSearchPage() {
           )}
         </div>
       </div>
-    </main>
+      <SiteFooter />
+    </div>
   );
 }

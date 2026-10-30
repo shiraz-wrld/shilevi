@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { CartLink } from "@/components/cart/CartLink";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { useCart } from "@/components/cart/CartProvider";
 
 type Listing = { id: string; owner_id: string; title: string; description: string; price_minor: number | null; currency: string; category_id: string; transaction_type: string; published_at: string | null; approximate_location: unknown; brand_id: string | null; attributes: Record<string, unknown> | null };
@@ -53,6 +54,14 @@ export default function ListingDetailPage() {
       if (!currentUserId || !id || !/^[0-9a-f-]{36}$/i.test(id)) return;
       const result = await db.from("saved_listings").select("listing_id").eq("user_id", currentUserId).eq("listing_id", id).maybeSingle();
       if (alive && !result.error) setIsSaved(Boolean(result.data));
+
+      // A real detail view, recorded for this account so the home page can reflect it. The function
+      // scopes the row to auth.uid(), refuses unpublished listings and deduplicates within 30
+      // minutes; a failure here must never break the page.
+      void db.rpc("record_listing_view", { p_listing_id: id }).then(
+        () => undefined,
+        () => undefined,
+      );
     }).catch(() => { if (alive) setUserId(null); });
     return () => { alive = false; };
   }, [id]);
@@ -172,9 +181,9 @@ export default function ListingDetailPage() {
     }
   }
 
-  return <main className="min-h-screen bg-slate-50 text-slate-950">
-    <header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5"><Link href="/" className="text-2xl font-black text-blue-700">shilevi</Link><div className="flex items-center gap-3"><CartLink /><Link href="/account" className="text-sm font-semibold text-blue-700">My account</Link></div></div></header>
-    <div className="mx-auto max-w-5xl px-5 py-8 sm:py-12"><Link href={category ? "/marketplace/" + category.division : "/"} className="text-sm font-semibold text-blue-700 hover:underline">← Back to {category ? divisionLabels[category.division] || "marketplace" : "marketplace"}</Link>
+  return <div className="flex min-h-screen flex-col bg-mist-50 text-ink-900">
+    <SiteHeader />
+    <div className="mx-auto w-full max-w-5xl flex-1 px-5 py-8 sm:py-12"><Link href={category ? "/marketplace/" + category.division : "/"} className="text-sm font-semibold text-blue-700 hover:underline">← Back to {category ? divisionLabels[category.division] || "marketplace" : "marketplace"}</Link>
       {state === "loading" ? <p role="status" className="mt-6 rounded-2xl border border-slate-200 bg-white p-8 text-slate-600">Loading listing details…</p> : state === "error" ? <section role="alert" className="mt-6 rounded-2xl border border-slate-200 bg-white p-8"><h1 className="text-2xl font-black">Listing temporarily unavailable</h1><p className="mt-3 leading-7 text-slate-600">We could not load this listing. Please try again later.</p><button onClick={() => window.location.reload()} className="mt-4 rounded-xl bg-blue-700 px-4 py-2 font-bold text-white">Retry</button></section> : state === "missing" || !listing ? <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-8"><h1 className="text-2xl font-black">Listing not found</h1><p className="mt-3 leading-7 text-slate-600">This listing may have been unpublished or the link may be incorrect.</p><Link href="/" className="mt-4 inline-block font-bold text-blue-700">Explore Shilevi →</Link></section> : <article className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-9"><p className="text-sm font-bold uppercase tracking-wide text-blue-700">{category?.name ?? "Shilevi listing"}</p><h1 className="mt-3 text-3xl font-black leading-tight sm:text-4xl">{listing.title}</h1>{brand && <p className="mt-3 text-sm text-slate-600">Listed under <Link href={"/brands/" + brand.slug} className="font-semibold text-blue-700 hover:underline">{brand.name}</Link></p>}<div className="mt-6 whitespace-pre-wrap break-words text-base leading-8 text-slate-700">{listing.description || "The provider has not added a detailed description yet."}</div>{locationText && <div className="mt-7 rounded-2xl bg-slate-50 p-4"><h2 className="font-bold">Approximate location</h2><p className="mt-1 text-sm leading-6 text-slate-600">{locationText}</p><p className="mt-2 text-xs text-slate-500">Exact addresses and private contact details are shared only through a secure, active order.</p></div>}{listing.published_at && <p className="mt-7 text-xs text-slate-500">Published {new Date(listing.published_at).toLocaleDateString()}</p>}</section>
         <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6"><p className="text-sm font-semibold text-slate-500">Listed price</p><p className="mt-2 text-3xl font-black">{price(listing.price_minor, listing.currency)}</p>
@@ -194,5 +203,6 @@ export default function ListingDetailPage() {
           <button onClick={() => void toggleSaved()} disabled={saving} className="mt-5 w-full rounded-xl border border-blue-200 px-4 py-3 text-sm font-bold text-blue-800 disabled:opacity-50">{saving ? "Saving…" : isSaved ? "♥ Saved — remove" : "♡ Save listing"}</button>{saveMessage && <p role="status" className="mt-3 text-sm text-slate-600">{saveMessage}</p>}<Link href="/account/saved" className="mt-3 inline-flex w-full justify-center rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold">View saved listings</Link><form onSubmit={sendRequest} className="mt-5 border-t border-slate-200 pt-5"><h2 className="font-bold">Ask the provider</h2><p className="mt-1 text-sm leading-6 text-slate-600">Send an enquiry about availability, details, or terms. Do not include passwords, financial credentials, or sensitive personal data.</p><label className="mt-3 block text-sm font-semibold">Your message<textarea required minLength={10} maxLength={3000} rows={4} value={requestMessage} onChange={event => setRequestMessage(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 font-normal" placeholder="Hi, is this still available? I would like to know…" /></label><button disabled={requestBusy} className="mt-3 w-full rounded-xl bg-blue-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{requestBusy ? "Sending enquiry…" : "Send enquiry"}</button>{requestStatus && <p role="status" className="mt-3 text-sm leading-6 text-slate-600">{requestStatus} {requestStatus.startsWith("Enquiry sent") && <Link href="/account/requests" className="font-bold text-blue-700 underline">View requests</Link>}</p>}</form><div className="mt-5 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-950">An enquiry is not a confirmed order or payment. For fixed-price products, use the cart to create a real order with sandbox payment. Real payment providers are not enabled yet.</div><Link href="/account" className="mt-5 inline-flex w-full justify-center rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold">Go to account</Link><p className="mt-4 text-xs leading-5 text-slate-500">Shilevi displays published listing information. Verify the offer and applicable terms before making a commitment.</p></aside>
       </article>}
     </div>
-  </main>;
+    <SiteFooter />
+  </div>;
 }

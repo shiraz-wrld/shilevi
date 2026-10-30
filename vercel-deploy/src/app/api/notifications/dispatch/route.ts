@@ -10,6 +10,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BATCH = 20;
+/** How long a claimed batch belongs to this invocation before another dispatcher may retry it. */
+const LEASE_SECONDS = 600;
+const MAX_ATTEMPTS = 5;
 
 function authorized(request: Request): boolean {
   const expected = serverEnv.notificationDispatchSecret;
@@ -23,9 +26,14 @@ function authorized(request: Request): boolean {
 /**
  * POST /api/notifications/dispatch
  *
- * Drains a bounded batch from public.notification_outbox. This is intentionally not callable from
+ * Drains the email channel of public.notification_outbox. This is intentionally not callable from
  * the browser: it requires a server-held secret plus the service role. Point a scheduled job at it
  * (Vercel Cron or a Supabase scheduled function) once RESEND_API_KEY and the secret are set.
+ *
+ * The queue is claimed with `claim_notification_batch('email', …)` (migration 0039). It used to read
+ * the table directly and mark anything that was not email as `skipped`, which consumed and retired
+ * queued push notifications before the push dispatcher could ever see them. Channel scoping, the
+ * attempt counter and the delivery lease all live in that one function now.
  */
 export async function POST(request: Request) {
   if (!authorized(request)) {
@@ -39,18 +47,15 @@ export async function POST(request: Request) {
   }
 
   const supabase = createSupabaseServiceClient();
-  const now = new Date().toISOString();
 
-  const { data: rows, error } = await supabase
-    .from("notification_outbox")
-    .select("id,recipient,channel,template,payload,attempts,status")
-    .in("status", ["queued", "failed"])
-    .lte("next_attempt_at", now)
-    .order("created_at", { ascending: true })
-    .limit(MAX_BATCH);
+  const { data: rows, error } = await supabase.rpc("claim_notification_batch", {
+    p_channel: "email",
+    p_limit: MAX_BATCH,
+    p_lease_seconds: LEASE_SECONDS,
+  });
 
   if (error) {
-    console.error("[notifications] queue read failed", { code: error.code });
+    console.error("[notifications] queue claim failed", { code: error.code });
     return NextResponse.json({ error: "Queue could not be read." }, { status: 500 });
   }
 
@@ -58,21 +63,21 @@ export async function POST(request: Request) {
   let failed = 0;
   let skipped = 0;
 
-  for (const row of rows ?? []) {
-    // Claim the row so two dispatchers cannot send the same message.
-    const { data: claimed } = await supabase
-      .from("notification_outbox")
-      .update({ status: "sending" })
-      .eq("id", row.id)
-      .in("status", ["queued", "failed"])
-      .select("id");
+  for (const row of (rows ?? []) as {
+    id: number;
+    recipient: string | null;
+    channel: string;
+    template: string;
+    payload: Record<string, unknown> | null;
+    attempts: number;
+  }[]) {
+    // The claim already counted this attempt.
+    const attempts = Number(row.attempts ?? 1);
 
-    if (!claimed?.length) continue;
-
-    if (row.channel !== "email" || typeof row.recipient !== "string" || !row.recipient.includes("@")) {
+    if (typeof row.recipient !== "string" || !row.recipient.includes("@")) {
       await supabase
         .from("notification_outbox")
-        .update({ status: "skipped", last_error: "No usable email recipient.", attempts: Number(row.attempts) + 1 })
+        .update({ status: "skipped", last_error: "No usable email recipient.", attempts })
         .eq("id", row.id);
       skipped += 1;
       continue;
@@ -86,16 +91,15 @@ export async function POST(request: Request) {
       });
       await supabase
         .from("notification_outbox")
-        .update({ status: "sent", sent_at: new Date().toISOString(), attempts: Number(row.attempts) + 1, last_error: null })
+        .update({ status: "sent", sent_at: new Date().toISOString(), attempts, last_error: null })
         .eq("id", row.id);
       sent += 1;
     } catch (cause) {
-      const attempts = Number(row.attempts) + 1;
       const delayMinutes = Math.min(2 ** attempts, 60);
       await supabase
         .from("notification_outbox")
         .update({
-          status: attempts >= 5 ? "skipped" : "failed",
+          status: attempts >= MAX_ATTEMPTS ? "skipped" : "failed",
           attempts,
           last_error: (cause instanceof Error ? cause.message : "Delivery failed").slice(0, 500),
           next_attempt_at: new Date(Date.now() + delayMinutes * 60_000).toISOString(),

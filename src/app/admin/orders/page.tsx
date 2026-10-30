@@ -1,9 +1,10 @@
 import "server-only";
 
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireOwnerAdmin } from "@/lib/admin/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AdminAccessDenied, AdminShell } from "@/components/admin/AdminShell";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { formatMoney } from "@/lib/money";
 
 export const metadata: Metadata = {
@@ -32,7 +33,6 @@ const deliveryLabels: Record<string, string> = {
 
 export default async function AdminOrdersPage() {
   const result = await requireOwnerAdmin();
-  if (!result.authorized) return <AdminAccessDenied reason={result.reason} />;
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -52,8 +52,7 @@ export default async function AdminOrdersPage() {
     >
       {error ? (
         <p role="alert" className="rounded-2xl border border-amber-800 bg-amber-950/40 p-5 text-sm leading-6 text-amber-100">
-          Orders could not be read. Apply reviewed migration 0019 to attach the owner read policy, then reload.
-        </p>
+          Orders could not be read. Nothing was changed. Reload once; if it persists, System health reports whether the cause is a missing migration, an MFA session or a missing capability.</p>
       ) : orders.length === 0 ? (
         <p className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-sm leading-6 text-slate-300">
           No orders yet.
@@ -89,8 +88,12 @@ export default async function AdminOrdersPage() {
         </div>
       )}
       <p className="mt-5 text-xs leading-6 text-slate-500">
-        Showing the most recent 100 orders. Refund, payout and dispute decisions are not available here; those workflows
-        require dedicated, tested functions before they can be exposed.
+        Showing the most recent 100 orders. Customer refund requests are decided in{" "}
+        <Link href="/admin/refunds" className="font-semibold text-blue-300 hover:text-blue-200">
+          Refunds
+        </Link>
+        , which requires an MFA-verified owner session. Payout dispatch remains a separate, credential-gated
+        step.
       </p>
     </AdminShell>
   );

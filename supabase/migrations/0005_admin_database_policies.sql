@@ -68,7 +68,7 @@ create or replace function public.set_listing_published_at()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $$
 declare
   category_division text;
   application_activity text;
@@ -116,7 +116,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists listings_set_published_at on public.listings;
 create trigger listings_set_published_at
@@ -149,7 +149,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $$
 declare
   row_data jsonb;
   event_id text;
@@ -196,7 +196,7 @@ begin
   if tg_op = 'DELETE' then return old; end if;
   return new;
 end;
-$;
+$$;
 revoke all on function public.audit_marketplace_admin_change() from public, anon, authenticated;
 
 drop trigger if exists audit_marketplace_categories_admin on public.marketplace_categories;

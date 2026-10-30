@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatMoney } from "@/lib/money";
+import { LiveTrackingCard } from "@/components/tracking/LiveTrackingCard";
 
 type Mode = "motorcycle" | "car" | "tuk_tuk" | "bicycle" | "van";
 type Ride = {
@@ -271,6 +272,12 @@ export default function RiderRidesPage() {
                             </a>
                           )}
                         </div>
+
+                        {["agreed", "paid", "arrived", "in_progress"].includes(ride.status) && (
+                          <div className="mt-4">
+                            <LiveTrackingCard kind="ride" id={ride.id} title="Trip map" />
+                          </div>
+                        )}
                       </article>
                     );
                   })}

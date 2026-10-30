@@ -1,9 +1,69 @@
 # Final release status
 
-**Date:** 2026-10-24 · **Release pass:** product completion, repository organisation, deployment
+**Date:** 2026-10-24 (latest update 2026-10-29) · **Release pass:** product completion, repository organisation, deployment
 preparation, security audit, Supabase migration packaging.
 **Repository state:** local Git repository created in this pass (there was none). Nothing pushed —
 see [GITHUB_RELEASE.md](GITHUB_RELEASE.md).
+
+> **2026-10-25 update — migration recovery and refund completion.** `0005` used a bare `$` as a
+dollar-quote delimiter and could never apply; it is fixed and the full `0001`–`0026` chain now
+passes `npm run test:migrations` (56 checks). New `0026` makes the owner refund decision reachable
+(the previous service-role-only grant made every decision fail with “Not authorized.”), and a
+refund review screen + API now exist. The customer-facing refund status is real, not a placeholder.
+The **hosted** migration state of `kdygwbymgpmssuszhski` is still unverified: no database password or
+management token is available here, so `supabase migration list`, `db push --dry-run`, hosted schema
+verification and the live RLS suite remain **BLOCKED — NOT RUN**. Full evidence in
+[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
+
+> **2026-10-28 update — personalized customer home.** Migration `0035` adds `customer_preferences`,
+an own-row read policy on `search_events`, `record_listing_view`, `clear_my_marketplace_history`,
+`set_customer_area` and the `customer_home()` ranking read model. The shell now knows who is signed
+in (`AuthProvider` + session-aware header with workspace links), `/` renders the customer dashboard
+on the server for a signed-in visitor and the marketing page for everyone else, and sign-in lands on
+`/account` instead of `/onboarding`. `0035` is applied hosted and production is redeployed
+(`shilevi-main-1pz0ustcd-russhiraz1-maxs-projects.vercel.app`, Ready, aliased to
+`https://shilevi-main.vercel.app`). Device GPS is deliberately not read: listings have no
+coordinates and no geocoder is configured, so discovery is county-based and labelled as such.
+A signed-in render against production is **NOT TESTED** — no customer session was available.
+Details in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
+
+> **2026-10-28 (later) — in-app notifications.** Migration `0036` adds `read_at`, an own-row
+read policy, column-level `update (read_at)` and the `my_notifications` / unread / mark-read
+functions; `/account/notifications` and a header badge now show real application, ride, order,
+delivery and payout updates. Applied hosted and deployed
+(`shilevi-main-lq3x8k9l8-russhiraz1-maxs-projects.vercel.app`, Ready). Web push does not exist (no
+service worker), and email is still blocked by unset Resend variables. Reading the inbox with a real
+signed-in account is **NOT TESTED**.
+
+> **2026-10-29 — notification dispatch is channel-scoped and lease-based.** Migration `0039`
+(`claim_notification_batch`) is **applied to the hosted project**: `supabase migration list
+--linked` reports `0039 | 0039 | 0039`, and `claim_notification_batch` appears in
+`supabase gen types typescript --linked`. Two defects were fixed: the email dispatcher read the
+outbox without a channel filter and retired every `push` row as “No usable email recipient”, so
+push could never deliver once `0038` began queueing rows; and a row claimed into `sending` by a
+request that died mid-flight was never selected again, losing the notification. The claim is now
+one security-definer function with a ten-minute lease, an attempt counted at claim time, channel
+scoping, `for update skip locked` and a five-attempt ceiling. Both dispatchers call it. New test
+`tests/db/notification-dispatch.test.mjs` (25 assertions) plus 7 checks inside `test:migrations`
+(307 total, 0 failures). **The dispatchers themselves still cannot deliver anything in production:
+no VAPID keys, no `RESEND_API_KEY`, no scheduler.**
+
+> **2026-10-29 — activity-specific rider onboarding and the push channel.** Migrations `0037`
+(activity-specific deliverer document requirements, one-transaction `create_delivery_application`,
+document checklist/replacement, route-intent publication) and `0038` (`push_subscriptions`, shared
+`render_notification`, `channel = 'push'` outbox rows, offer/proposal triggers) are **applied to the
+hosted project** `kdygwbymgpmssuszhski`: `supabase migration list --linked` now reports
+`0037 | 0037 | 0037` and `0038 | 0038 | 0038`, and `supabase gen types typescript --linked` shows
+`push_subscriptions`, `delivery_document_requirements`, `delivery_application_route_intents`,
+`create_delivery_application`, `my_delivery_document_checklist`, `publish_my_delivery_route`,
+`attach_my_delivery_document`, `save_push_subscription`, `revoke_push_subscription` and
+`my_push_subscription_count` on the remote schema. Local: `test:migrations` 299 checks, `test:db`,
+`test:auth` 29, `test:search`, `test:rls:selftest`, `tsc`, lint, build, route audit 331/331,
+`release:sync`/`release:verify` and `secrets:scan` (596 files) all pass. **Deployment was not
+performed**: Vercel builds the committed `vercel-deploy/` folder, and committing/pushing was not
+authorized in this pass. Push delivery to a real device is **NOT TESTED** — no VAPID keys and no
+scheduler are configured, and the dispatcher refuses to run without keys. Configuration and live
+test steps: [PUSH_NOTIFICATIONS.md](PUSH_NOTIFICATIONS.md).
 
 ## Status vocabulary
 
@@ -46,7 +106,7 @@ row names the command that produced the result.
 | Safe recovery point before changes | **COMPLETE AND VERIFIED** | `git init` + checkpoint commit `ac27aeb` (256 files). No history existed before. |
 | Single self-contained Vercel deployment folder | **COMPLETE AND VERIFIED** | `vercel-deploy/` (160 files) generated by `scripts/prepare-deploy.mjs`; built independently (exit 0) and served for the HTTP audit |
 | Deployment folder cannot silently drift | **COMPLETE AND VERIFIED** | `npm run deploy:verify` — PASS (file set, bytes and SHA-256 recomputed) |
-| Manual Supabase migration bundle | **COMPLETE AND VERIFIED** | `supabase-manual-migration/` — 25 migrations + README + `verify_schema.sql` + `MANIFEST.md`; `npm run migrations:verify` PASS |
+| Manual Supabase migration bundle | **COMPLETE AND VERIFIED** | `supabase-manual-migration/` — 27 migrations + README + `verify_schema.sql` + `MANIFEST.md`; `npm run migrations:verify` PASS |
 | Every file classified | **COMPLETE AND VERIFIED** | [FILE_CLASSIFICATION.md](FILE_CLASSIFICATION.md) + machine-readable [DEPLOY_MANIFEST.json](DEPLOY_MANIFEST.json) |
 | Obsolete/duplicate material identified | **COMPLETE AND VERIFIED** | `shilevi-foundation/` moved to `archive/` (verified unreferenced first); `.domain-build/` removed and ignored |
 | Secret-free `.env.example` | **COMPLETE AND VERIFIED** | Every variable the code reads is documented; placeholders only; `npm run secrets:scan` PASS |
@@ -123,7 +183,7 @@ All commands were run in this workspace on 2026-10-24. `exit` is the real proces
 | Credential scan | `npm run secrets:scan` | **exit 0** — 440 files, no findings |
 | Credential scan is effective | planted `MPESA_CONSUMER_SECRET=<literal>` in a temp file, then scanned | **caught, exit 1** — the probe file was deleted |
 | Deployment bundle drift | `npm run deploy:verify` | **exit 0** — 160 files match by hash |
-| Migration bundle drift | `npm run migrations:verify` | **exit 0** — 25 migrations + guide + verifier |
+| Migration bundle drift | `npm run migrations:verify` | **exit 0** — 27 migrations + guide + verifier |
 | Independent build of `vercel-deploy/` | `cd vercel-deploy && npm ci && npx next build` | **exit 0** — full route table emitted, middleware 94 kB |
 | HTTP/SEO/security audit of that build | `BASE_URL=http://127.0.0.1:3200 npm run verify:routes` | **exit 0 — 311/311 checks passed** |
 | Production build of the repository root | `npm run build` | **exit 0** (see §3.1) |

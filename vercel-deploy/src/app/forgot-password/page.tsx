@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { AuthShell } from "@/components/auth/AuthShell";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -28,15 +29,35 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  return <main className="flex min-h-screen items-center justify-center bg-slate-50 px-5 py-12"><section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
-    <Link href="/" className="text-2xl font-black text-blue-700">shilevi</Link>
-    <h1 className="mt-8 text-3xl font-black">Reset your password</h1>
-    <p className="mt-2 text-slate-600">Enter the email address linked to your account. We’ll send a secure reset link if an account matches.</p>
-    <form onSubmit={submit} className="mt-7 space-y-4">
-      <label className="block text-sm font-semibold">Email address<input required type="email" maxLength={254} autoComplete="email" value={email} onChange={event=>setEmail(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600" /></label>
-      <button disabled={busy} className="w-full rounded-xl bg-blue-700 px-4 py-3 font-bold text-white disabled:opacity-60">{busy ? "Sending…" : "Send reset link"}</button>
-      {message && <p role={sent ? "status" : "alert"} className="text-sm text-slate-700">{message}</p>}
-    </form>
-    <p className="mt-6 text-sm text-slate-600"><Link className="font-semibold text-blue-700" href="/login">Back to sign in</Link></p>
-  </section></main>;
+  return (
+    <AuthShell
+      title="Reset your password"
+      subtitle="Enter the email address linked to your account. We will send a secure reset link if an account matches."
+      footer={
+        <p>
+          <Link className="font-semibold text-brand-800 underline underline-offset-2" href="/login">
+            Back to sign in
+          </Link>
+        </p>
+      }
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <label className="field-label">
+          Email address
+          <input required type="email" maxLength={254} autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} className="field mt-1.5 font-normal" />
+        </label>
+        <button disabled={busy} className="btn btn-primary w-full">
+          {busy ? "Sending…" : "Send reset link"}
+        </button>
+        {message && (
+          <p role={sent ? "status" : "alert"} className={sent ? "notice notice-success" : "notice notice-error"}>
+            {message}
+          </p>
+        )}
+      </form>
+      <p className="mt-5 text-xs leading-5 text-ink-400">
+        For your security we do not reveal whether an address is registered.
+      </p>
+    </AuthShell>
+  );
 }

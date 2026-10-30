@@ -34,12 +34,26 @@ const mpesa = {
   },
 };
 
+const geocoder = {
+  // One of: nominatim, mapbox, google. Empty means no provider is configured.
+  provider: (clean(process.env.GEOCODE_PROVIDER) ?? "").toLowerCase(),
+  mapboxToken: clean(process.env.MAPBOX_TOKEN),
+  googleKey: clean(process.env.GOOGLE_MAPS_API_KEY),
+  baseUrl: clean(process.env.GEOCODE_BASE_URL),
+  contact: clean(process.env.GEOCODE_CONTACT),
+};
+
 export const serverEnv = {
   supabaseServiceRoleKey: clean(process.env.SUPABASE_SERVICE_ROLE_KEY),
   mpesa,
   resendApiKey: clean(process.env.RESEND_API_KEY),
   resendFrom: clean(process.env.RESEND_FROM_EMAIL) ?? "Shilevi <no-reply@shilevi.com>",
   notificationDispatchSecret: clean(process.env.NOTIFICATION_DISPATCH_SECRET),
+  cronSecret: clean(process.env.CRON_SECRET),
+  vapidPublicKey: clean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY),
+  vapidPrivateKey: clean(process.env.VAPID_PRIVATE_KEY),
+  vapidSubject: clean(process.env.VAPID_SUBJECT) ?? "mailto:support@shilevi.com",
+  geocoder,
 } as const;
 
 export function isMpesaConfigured(): boolean {
@@ -65,6 +79,26 @@ export function isMpesaB2cConfigured(): boolean {
 
 export function isResendConfigured(): boolean {
   return Boolean(serverEnv.resendApiKey);
+}
+
+/**
+ * Web push needs a VAPID key pair. Both halves are required: the public key is what the browser
+ * subscribes with, the private key signs the delivery. Without them the dispatcher refuses to run
+ * rather than reporting a delivery it did not make.
+ */
+export function isPushConfigured(): boolean {
+  return Boolean(serverEnv.vapidPublicKey && serverEnv.vapidPrivateKey);
+}
+
+/**
+ * Address lookup needs a provider and its credential. Without both, the app must say so instead of
+ * pretending an address resolved.
+ */
+export function isGeocodeConfigured(): boolean {
+  if (geocoder.provider === "nominatim") return Boolean(geocoder.contact || geocoder.baseUrl);
+  if (geocoder.provider === "mapbox") return Boolean(geocoder.mapboxToken);
+  if (geocoder.provider === "google") return Boolean(geocoder.googleKey);
+  return false;
 }
 
 export function hasServiceRole(): boolean {

@@ -35,7 +35,7 @@ export default function ProviderRequestsPage() {
         if (!listingResult.error) setTitles(Object.fromEntries(((listingResult.data ?? []) as ListingRow[]).map(item => [item.id, item.title + (item.status === "published" ? "" : " (unpublished)")])));
       } else setTitles({});
     } catch {
-      setError(true); setMessage("Could not load provider requests. Confirm migration 0014 has been reviewed and applied.");
+      setError(true); setMessage("We could not load your enquiries right now. Please try again in a moment.");
     } finally { setLoading(false); }
   }
   useEffect(() => { void load(); }, []);
@@ -53,7 +53,7 @@ export default function ProviderRequestsPage() {
       if (result.error) throw result.error;
       setMessage("Your response has been saved."); await load();
     } catch {
-      setError(true); setMessage("Could not send the response. The request may have changed, or migration 0014 may not be applied.");
+      setError(true); setMessage("Your reply could not be sent. The request may have changed — reload and try again.");
     } finally { setBusyId(""); }
   }
 

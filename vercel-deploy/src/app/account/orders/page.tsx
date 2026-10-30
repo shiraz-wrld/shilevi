@@ -39,7 +39,7 @@ export default function CustomerOrdersPage() {
         if (result.error) throw result.error;
         if (alive) setOrders((result.data ?? []) as OrderRow[]);
       } catch (caught) {
-        if (alive) setError(caught instanceof Error ? caught.message : "We could not load your orders. Confirm migrations 0016-0017 have been applied.");
+        if (alive) setError(caught instanceof Error ? caught.message : "We could not load your orders right now. Please try again in a moment.");
       } finally {
         if (alive) setLoading(false);
       }

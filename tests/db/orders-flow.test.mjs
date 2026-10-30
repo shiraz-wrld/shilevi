@@ -123,6 +123,11 @@ const migrations = [
   "0022_rider_balance_authorization.sql",
   "0023_payment_methods_and_sandbox_switch.sql",
   "0024_storage_buckets_and_policies.sql",
+  "0026_refund_decision_execution.sql",
+  "0027_platform_settings_access_and_validation.sql",
+  "0028_owner_console_read_models.sql",
+  "0029_delivery_network_foundation.sql",
+  "0030_deliverer_onboarding_documents.sql",
 ];
 
 for (const name of migrations) {
@@ -604,5 +609,39 @@ assert.equal(Number(providerOrderLedger.d), Number(providerOrderLedger.c), "prov
 
 console.log("ride flow: KSh 2,200 agreed, KSh 220 commission, KSh 1,980 rider net, dual confirmation, KSh 1,000 withdrawal settled");
 console.log("house hunt: free search, KSh 20 unlock, exact contact released only after payment, duplicate unlock blocked");
+
+// --- 0027: platform settings are owner-only and range-checked before they can price anything.
+await asUser(CUSTOMER, true);
+await db.query("select public.admin_update_setting('commission_rate_bps', '1500'::jsonb)");
+assert.equal(
+  (await db.query("select value #>> '{}' as v from public.platform_settings where key = 'commission_rate_bps'")).rows[0].v,
+  "1500",
+  "owner can set a valid commission",
+);
+await assert.rejects(
+  db.query("select public.admin_update_setting('commission_rate_bps', '9000'::jsonb)"),
+  /between 0 and 5000/,
+  "a commission above the ceiling is rejected",
+);
+await assert.rejects(
+  db.query("select public.admin_update_setting('currency', '\"kes\"'::jsonb)"),
+  /three-letter ISO code/,
+  "a malformed currency is rejected",
+);
+await assert.rejects(
+  db.query("select public.admin_update_setting('unknown_key', '1'::jsonb)"),
+  /Unknown setting/,
+  "an unknown key is rejected",
+);
+await asUser(CUSTOMER, false);
+await assert.rejects(
+  db.query("select public.admin_update_setting('commission_rate_bps', '1000'::jsonb)"),
+  /Not authorized/,
+  "a non-owner cannot change pricing",
+);
+await asUser(CUSTOMER, true);
+await db.query("select public.admin_update_setting('commission_rate_bps', '1000'::jsonb)");
+console.log("settings: owner-only, range-checked, non-owner denied");
+
 console.log("staff: self-grant denied, owner grant effective, revocation effective");
 console.log("ALL MIGRATION AND FLOW CHECKS PASSED");

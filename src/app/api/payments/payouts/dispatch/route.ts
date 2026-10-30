@@ -13,6 +13,11 @@ export const dynamic = "force-dynamic";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** Unauthorized callers see the same response a missing route would give: no audience, no hint. */
+function concealed() {
+  return NextResponse.json({ error: "Not found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+}
+
 /**
  * POST /api/payments/payouts/dispatch
  *
@@ -21,9 +26,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
  * callback. A payout that is already processing is never re-sent.
  */
 export async function POST(request: Request) {
-  if (!isSameOriginRequest(request)) {
-    return NextResponse.json({ error: "Request origin is not allowed." }, { status: 403 });
-  }
+  // CSRF first, but a rejected Origin must not confirm that this route exists.
+  if (!isSameOriginRequest(request)) return concealed();
   const limit = rateLimit(clientKey(request, "payout-dispatch"), 20, 60_000);
   if (!limit.allowed) {
     return NextResponse.json({ error: "Too many attempts." }, { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } });
@@ -35,15 +39,15 @@ export async function POST(request: Request) {
 
   const supabase = await createSupabaseServerClient();
   const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
-  }
-  if (!userData.user.email_confirmed_at || !isOwnerAdminEmail(userData.user.email)) {
-    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
-  }
+  if (userError || !userData.user) return concealed();
+  if (!userData.user.email_confirmed_at || !isOwnerAdminEmail(userData.user.email)) return concealed();
+
   const { data: assurance } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (assurance?.currentLevel !== "aal2") {
-    return NextResponse.json({ error: "MFA assurance level 2 is required." }, { status: 403 });
+    return NextResponse.json(
+      { error: "MFA assurance level 2 is required. Verify your authenticator and retry.", code: "mfa_required" },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   if (!isMpesaB2cConfigured()) {
@@ -123,5 +127,5 @@ export async function POST(request: Request) {
 }
 
 export function GET() {
-  return NextResponse.json({ error: "Use POST." }, { status: 405, headers: { Allow: "POST" } });
+  return concealed();
 }

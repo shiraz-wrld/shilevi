@@ -37,7 +37,7 @@ export default function SavedListingsPage() {
         setCategories(Object.fromEntries((cats.data ?? []).map(row => [row.id, row.name])));
       } else setCategories({});
     } catch {
-      setError("Saved listings could not be loaded. Confirm migration 0011 is reviewed and applied, then try again.");
+      setError("Your saved listings could not be loaded right now. Please try again in a moment.");
     } finally { setLoading(false); }
   }
 

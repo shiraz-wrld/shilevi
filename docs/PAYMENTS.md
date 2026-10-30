@@ -58,9 +58,30 @@ RPCs refuse (the DB test asserts exactly this).
 - All money is integer minor units (`bigint`), currency `KES`. KSh 1 = 100 minor units.
 - Commission default is **10%** of the agreed item subtotal or ride fare, configurable in
   `commission_rules` (0–5000 bps) and `platform_settings.commission_rate_bps`.
+- Two distinct commission events are recorded, never merged (migration 0031):
+  1. **Client payment commission** — 10% of the marketplace commissionable base, already snapshotted
+     on `orders.commission_minor` / paid rides and written as the `commission` ledger pair when the
+     payment is confirmed.
+  2. **Deliverer payout commission** — 10% of the payout amount, written by
+     `apply_payout_commission(payout_id)` as a `commission` ledger pair that references `payout_id`
+     (debit `rider_payable`, credit `platform_commission`). `payouts.commission_minor`,
+     `commission_rate_bps` and the generated `net_minor` record the same figures. Retries write
+     nothing (unique index); a failed payout is corrected with `admin_reverse_payout_commission`,
+     which posts an `adjustment` pair instead of editing history.
+- Rate resolution is central: `public.commission_rate_bps(transaction_type)` reads the active
+  `commission_rules` row (`client_payment`, `deliverer_payout`) and only falls back to the platform
+  setting. `public.commission_split(base_minor, transaction_type)` is the single rounding
+  implementation (whole currency unit, never above the base). No page hard-codes 10%.
 - Ride commission uses `floor(fare × rate_bps / 10000)`, snapshotted on the paid ride.
 - The commission rate is snapshotted onto the order/ride. A later rule change never rewrites a
   paid transaction.
+- Delivery prices are **never** invented. `quote_delivery(...)` prices a shipment only from an
+  active owner-configured `delivery_pricing_rules` row that matches the route and vehicle class; with
+  no matching rule it raises instead of returning a number. The quote is stored in `delivery_quotes`
+  with the rule id and version, its components, expiry and the
+  `delivery_fee = rider_fee + platform_fee` split. `attach_delivery_quote_to_order` moves that
+  snapshot onto the unpaid order and shipment exactly once (a consumed quote is refused), so
+  `mark_order_paid` still books the same split afterwards.
 - Delivery has its own split (`delivery_fee = rider_fee + platform_fee`).
 - The House Hunt KSh 20 is **platform revenue**, not landlord income.
 - Ledger entries are double-entry: every transaction balances, settlement nets to zero, and each
@@ -70,12 +91,13 @@ RPCs refuse (the DB test asserts exactly this).
 - Available rider balance = `rider_payable` credits minus paid/processing withdrawals. Pending
   withdrawals are reserved immediately.
 
-### Commission conflict to resolve
+### Commission decision
 
-The brief mentions both 10% and 20%. The repository's approved default is **10%**
-(`DEFAULT_COMMISSION_RATE_BPS = 1000`, seeded `default-marketplace`). Do not change the production
-default without an explicit business decision. Per-category overrides can be added to
-`commission_rules`; the schema already supports division and category scope.
+The rate is **10%** on client payment transactions and **10%** on deliverer payout transactions
+(owner decision; `DEFAULT_COMMISSION_RATE_BPS = 1000`, seeded `client-payment-commission` and
+`deliverer-payout-commission`). 20% is no longer the default anywhere in code. Per-category and
+per-division overrides are possible through `commission_rules` without touching code, and any
+change is audited through the owner console rather than edited in a page.
 
 ## Flow: customer pays with M-Pesa
 

@@ -95,7 +95,8 @@ export function HouseHuntDetail({ listingId }: { listingId: string }) {
           }
         }
       } catch (cause) {
-        if (active) setError(cause instanceof Error ? cause.message : "This property could not be loaded. Confirm migration 0021 has been applied.");
+        console.error("[house-hunt] detail load failed", cause instanceof Error ? cause.message : cause);
+        if (active) setError("This property could not be loaded right now. Please try again shortly.");
       } finally {
         if (active) setLoading(false);
       }

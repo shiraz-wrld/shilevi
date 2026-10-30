@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import { CartProvider } from "@/components/cart/CartProvider";
+import { CookieNotice } from "@/components/layout/CookieNotice";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { absoluteUrl, site } from "@/lib/site";
 import "./globals.css";
@@ -50,7 +52,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         >
           Skip to main content
         </a>
-        <CartProvider>{children}</CartProvider>
+        <AuthProvider>
+          <CartProvider>{children}</CartProvider>
+        </AuthProvider>
+        <CookieNotice />
         <JsonLd
           data={[
             {

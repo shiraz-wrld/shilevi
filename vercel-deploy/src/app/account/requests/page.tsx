@@ -34,7 +34,7 @@ export default function CustomerRequestsPage() {
         if (!listingResult.error) setTitles(Object.fromEntries(((listingResult.data ?? []) as ListingRow[]).map(item => [item.id, item.title + (item.status === "published" ? "" : " (no longer published)")])));
       } else setTitles({});
     } catch {
-      setError(true); setMessage("Could not load requests. Confirm migration 0014 has been reviewed and applied to your Supabase project.");
+      setError(true); setMessage("We could not load your requests right now. Please try again in a moment.");
     } finally { setLoading(false); }
   }
 
@@ -48,7 +48,7 @@ export default function CustomerRequestsPage() {
       if (result.error) throw result.error;
       setMessage("Request closed."); await load();
     } catch {
-      setError(true); setMessage("Could not close this request. It may already be closed or require migration 0014.");
+      setError(true); setMessage("That request could not be closed. It may already be closed — reload to see its current state.");
     } finally { setBusyId(""); }
   }
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { requireOwnerAdmin } from "@/lib/admin/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasServiceRole } from "@/lib/env.server";
-import { AdminAccessDenied, AdminShell } from "@/components/admin/AdminShell";
+import { AdminShell } from "@/components/admin/AdminShell";
 
 export const metadata: Metadata = {
   title: "Search insights",
@@ -84,7 +84,6 @@ export default async function SearchInsightsPage({
   searchParams: Promise<{ days?: string }>;
 }) {
   const access = await requireOwnerAdmin();
-  if (!access.authorized) return <AdminAccessDenied reason={access.reason} />;
 
   const params = await searchParams;
   const requested = Number(params.days);
@@ -138,9 +137,7 @@ export default async function SearchInsightsPage({
         <section className="mt-6 rounded-2xl border border-red-900 bg-red-950/40 p-5 text-sm leading-6 text-red-100">
           <h2 className="text-base font-bold">Search reporting is not available</h2>
           <p className="mt-2">
-            The reporting function could not be read. Apply migration 0025, confirm the owner session
-            has MFA, then reload. No data was changed.
-          </p>
+            The reporting function could not be read. Nothing was changed. Reload once; if it persists, System health reports whether the cause is a missing migration, an MFA session or a missing capability.</p>
         </section>
       )}
 

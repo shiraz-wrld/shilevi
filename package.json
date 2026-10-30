@@ -11,10 +11,12 @@
     "start": "next start",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "test:db": "node tests/db/orders-flow.test.mjs",
+    "test:db": "node tests/db/orders-flow.test.mjs && node tests/db/notification-dispatch.test.mjs",
+    "test:notifications": "node tests/db/notification-dispatch.test.mjs",
+    "test:migrations": "node tests/db/migrations-full.test.mjs",
     "test:rls:live": "node tests/rls/live-rls.mjs",
     "test:rls:selftest": "node tests/rls/selftest.mjs",
-    "test:auth": "node tests/auth/redirect.test.mjs",
+    "test:auth": "node tests/auth/redirect.test.mjs && node tests/auth/access-gate.test.mjs",
     "test:search": "node tests/search/search.test.mjs",
     "verify:routes": "node scripts/route-audit.mjs",
     "deploy:sync": "node scripts/prepare-deploy.mjs",
@@ -30,7 +32,8 @@
     "@supabase/supabase-js": "^2.57.0",
     "next": "^15.5.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.10",
@@ -38,6 +41,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.5.0",
     "tailwindcss": "^4.1.0",

@@ -62,7 +62,8 @@ export function HouseHuntSearch() {
       if (searchError) throw searchError;
       setRows((data ?? []) as Property[]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Properties could not be loaded. Confirm migration 0021 has been applied.");
+      console.error("[house-hunt] search failed", cause instanceof Error ? cause.message : cause);
+      setError("House Hunt listings are temporarily unavailable. Please try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -79,7 +80,8 @@ export function HouseHuntSearch() {
         if (searchError) throw searchError;
         if (active) setRows((data ?? []) as Property[]);
       } catch (cause) {
-        if (active) setError(cause instanceof Error ? cause.message : "Properties could not be loaded. Confirm migration 0021 has been applied.");
+        console.error("[house-hunt] initial load failed", cause instanceof Error ? cause.message : cause);
+        if (active) setError("House Hunt listings are temporarily unavailable. Please try again in a moment.");
       } finally {
         if (active) setLoading(false);
       }

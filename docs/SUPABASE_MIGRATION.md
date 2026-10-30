@@ -4,9 +4,27 @@
 `qtdmqpaqtqjdcjhquyur`, region West EU (Ireland).
 **Bundle:** [`supabase-manual-migration/`](../supabase-manual-migration) — generated from
 [`supabase/migrations/`](../supabase/migrations) by `npm run migrations:sync`.
-**Status:** every migration in this bundle has been applied and exercised **in PGlite only**
-(`npm run test:db`, `npm run test:search`). **None has been applied to the hosted project.** Nothing
-in this repository applies them automatically, and CI never does.
+**Status (verified 2026-10-29):** the linked project reports `0001` through `0039` applied.
+`npx supabase migration list --linked` shows every local migration with a matching remote row and no
+pending or failed entry. `0032`, `0033`, `0037`, `0038` and `0039` were applied with `supabase db push`
+after a dry run that named exactly the pending files; no row in
+`supabase_migrations.schema_migrations` was edited by hand and no repair was needed. Remote objects
+were then read back with `npx supabase gen types typescript --linked`
+(`push_subscriptions`, `delivery_document_requirements`, `delivery_application_route_intents`,
+`create_delivery_application`, `my_delivery_document_checklist`, `publish_my_delivery_route`,
+`attach_my_delivery_document`, `save_push_subscription`, `revoke_push_subscription`,
+`my_push_subscription_count` and `claim_notification_batch` are all present in the generated types).
+
+> The CLI emits `failed to connect to the docker API` warnings during a push when Docker Desktop is
+> not running. They concern a local migrations-catalogue cache and the lint image, not the remote
+> apply; confirm the result with `supabase migration list --linked` rather than the warning text.
+
+All migrations are also exercised **in PGlite** (`npm run test:migrations`, `npm run test:db`,
+`npm run test:search`). Nothing in this repository applies them automatically, and CI never does.
+
+> If a console screen reports that a function is missing, confirm the remote list above before
+> editing SQL. A mismatch is far more often an MFA assurance level or a missing capability than an
+> unapplied migration — migration `0005` makes `is_shilevi_owner_admin()` require `aal2`.
 
 > Treat the reference and organisation IDs as configuration, not credentials. No key, token or
 > password belongs in this guide, and none exists in the repository.
@@ -40,7 +58,7 @@ second free project for staging and practise there first.
 
 ## 3. Apply the migrations, in order, one file per run
 
-The bundle is ordered `0001` → `0025`. Each file assumes every earlier file succeeded.
+The bundle is ordered `0001` → `0036`. Each file assumes every earlier file succeeded.
 
 1. Open **SQL editor → New query**.
 2. Paste the whole file (not part of it) and run it **once**.
@@ -83,6 +101,56 @@ that file applied. That is why step 4 matters.
 | 0023 | payment methods and sandbox switch | fail-closed `allow_mock_payments`, provider registry |
 | 0024 | storage buckets and policies | `listing-images` (public), `provider-documents` (private) |
 | 0025 | search and demand intelligence | search RPC, `search_events`, admin insights, prune function |
+| 0026 | refund decision execution | grants `admin_decide_refund` to `authenticated` after 0017 made it unreachable |
+| 0027 | platform settings access and validation | owner reachability for `get_admin_settings`/`admin_update_setting`, plus range checks |
+| 0028 | owner console read models | nine owner-only, MFA-gated, read-only functions behind the customer, provider, rider, delivery, enquiry, review, role, onboarding and coverage screens |
+| 0029 | intelligent delivery network foundation | vehicle classes, fleets and fleet drivers, provider routes, shipment cargo columns, matched offers, incidents, matching/offer/accept functions, owner-resolvable provider suspension, private delivery-document storage policy |
+| 0030 | deliverer onboarding and documents | document-type catalogue, private `delivery_documents`, resumable application drafts, atomic individual/fleet submission, onboarding vehicle registration, document/fleet/driver review functions, fleet-driver authorization in matching and acceptance |
+| 0031 | delivery pricing and payout commission | owner-configured `delivery_pricing_rules`, fail-closed `quote_delivery`, immutable `delivery_quotes` snapshots, `attach_delivery_quote_to_order` repricing before payment, central `commission_rate_bps`/`commission_split`, 10% `apply_payout_commission` plus audited reversal on `payouts`, `admin_payout_reconciliation` |
+| 0032 | application review visibility and evidence | `provider_applications_read_reviewer` (the queue was invisible to owners before it), and `admin_application_detail(uuid)` returning one application with the applicant's confirmed email, name, phone, roles, private document metadata, vehicles, fleets, service areas and audit history for a caller holding `applications.review` |
+| 0036 | in-app notification centre | adds `notification_outbox.read_at`, an own-row read policy and column-level `update (read_at)` grant, and the `my_notifications` / `unread_notification_count` / `mark_notification_read` / `mark_all_notifications_read` functions; titles, bodies and deep links are derived server-side and an id only enters a path when it is a valid UUID |
+| 0035 | customer home personalization | owner-free customer preferences (area + personalisation consent), an own-row read policy on `search_events`, `record_listing_view`, `clear_my_marketplace_history`, `set_customer_area` validated against `service_locations`, and `customer_home` — a security-definer read model that ranks published, active-category listings by recency-weighted category affinity, chosen county and price band, scoped entirely to `auth.uid()` |
+| 0034 | delivery confirmation code vault | moves the customer's delivery code out of the rider-readable `deliveries` row into `delivery_proof_codes` (RLS on, no policy, no client grants), vaults codes written by `place_order` through a trigger and nulls the plaintext, adds attempt accounting with a 15-minute lock after five wrong guesses, and rewrites `rider_update_delivery`/`get_delivery_proof_code` so verification must happen in its own committed call before a delivery can be completed |
+| 0033 | provider category activation | makes `provider_activities` reachable: grants the existing owner-checked `grant_provider_activity` to `authenticated`, and adds audited `admin_grant_provider_activity(uuid,uuid,text[],integer)` that refuses an unapproved application, an inactive category, an empty transaction-type list and a category outside the application's division |
+
+### 3a. If a push already failed part-way (state-aware recovery)
+
+A failed `supabase db push` stops at the first error. Files before the failure are committed; the
+failing file and everything after it are not. **Do not run `db reset`.**
+
+1. Inspect the real state, read-only:
+
+   ```bash
+   supabase migration list --linked
+   ```
+
+   The `Remote` column is the record of what actually ran. If the command cannot connect, the remote
+   state is **unknown** — do not guess and do not hand-edit `supabase_migrations.schema_migrations`.
+2. Compare with `0001`–`0039`. A gap, or a `Local` entry with no `Remote` entry, is a pending file.
+3. Re-run `supabase db push`. The CLI skips migrations already recorded as applied and resumes at the
+   first pending file. This is why the failed file was fixed forward instead of renumbering the
+   chain: the earlier `0001`–`0004` rows stay valid.
+4. Only if the CLI refuses because the failed file was recorded as applied while nothing changed,
+   apply that single file in the SQL editor, then run `supabase/verify_schema.sql` and confirm every
+   row reads `PASS`. Repairing the history table by hand is a last resort and requires a database
+   backup first.
+
+### 3b. The `0005` syntax repair (2026-10-25)
+
+`0005` used `as $` … `$;` as the body delimiter in `set_listing_published_at()` and
+`audit_marketplace_admin_change()`. PostgreSQL requires a matching dollar-quote tag (`$$`, `$body$`,
+and so on) and rejects a bare `$` with `SQLSTATE 42601`. Both functions now use `$$`. Nothing else in
+that file changed: the validation rules, trigger behaviour, owner checks and empty `search_path` are
+identical. The whole chain now applies cleanly in PGlite (`npm run test:migrations`, 56 checks).
+
+### 3c. `0026` and refunds
+
+`0017` revoked EXECUTE on `admin_decide_refund()` from `authenticated` and granted it to
+`service_role` only. A service-role PostgREST call carries no end-user JWT, so `auth.uid()` is NULL
+and the function's own owner guard could never pass: **no refund could be decided at all.** `0026`
+restores the intended path by granting EXECUTE to `authenticated`; the function still requires an
+allowlisted, email-confirmed owner whose JWT carries `aal2`, and `public`/`anon` stay revoked. If
+`0026` is not applied, `POST /api/admin/refunds/decide` returns 503 rather than claiming success.
 
 ## 4. Owner allowlist (do this immediately after 0003)
 

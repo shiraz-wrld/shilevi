@@ -3,7 +3,7 @@ import "server-only";
 import type { Metadata } from "next";
 import { requireStaffCapability } from "@/lib/admin/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AdminAccessDenied, AdminShell } from "@/components/admin/AdminShell";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { PropertyReview } from "./PropertyReview";
 
 export const metadata: Metadata = {
@@ -32,7 +32,6 @@ type Contact = { listing_id: string; exact_address: string; contact_name: string
 
 export default async function AdminPropertiesPage() {
   const result = await requireStaffCapability("properties.verify");
-  if (!result.authorized) return <AdminAccessDenied reason={result.reason} />;
 
   const supabase = await createSupabaseServerClient();
   const { data: propertyData, error } = await supabase
@@ -72,8 +71,7 @@ export default async function AdminPropertiesPage() {
     >
       {error ? (
         <p role="alert" className="rounded-2xl border border-amber-800 bg-amber-950/40 p-5 text-sm leading-6 text-amber-100">
-          Properties could not be read. Apply migration 0021 and confirm your owner session has MFA level 2.
-        </p>
+          Properties could not be read. Nothing was changed. Reload once; if it persists, System health reports whether the cause is a missing migration, an MFA session or a missing capability.</p>
       ) : (
         <PropertyReview rows={rows} />
       )}

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/components/cart/CartProvider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { formatMoney } from "@/lib/money";
+import { MapPinPicker, type PickedPoint } from "@/components/tracking/MapPinPicker";
 
 type County = { id: string; county: string; county_code: number };
 type CheckoutSettings = {
@@ -36,6 +37,8 @@ export default function CheckoutPage() {
   const [method, setMethod] = useState<DeliveryMethod>("platform_delivery");
   const [county, setCounty] = useState("Nairobi");
   const [address, setAddress] = useState("");
+  const [pin, setPin] = useState<PickedPoint | null>(null);
+  const [landmark, setLandmark] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
@@ -159,6 +162,24 @@ export default function CheckoutPage() {
         return;
       }
 
+      // The pin is attached after the order exists, and only when the customer placed one. A
+      // feedback failure here must stop the flow before payment rather than silently shipping an
+      // order whose destination nobody confirmed.
+      if (method === "platform_delivery" && pin) {
+        const destination = await db.rpc("set_delivery_destination", {
+          p_order_id: created.order_id,
+          p_lat: pin.latitude,
+          p_lng: pin.longitude,
+          p_accuracy_m: pin.accuracy_m,
+          p_landmark: landmark.trim() || null,
+        });
+        if (destination.error) {
+          setCreatedOrderId(created.order_id);
+          setError("Your order was created, but the exact destination could not be saved. Open the order to set it before paying.");
+          return;
+        }
+      }
+
       if (provider === "mock") {
         const paymentResult = await db.rpc("confirm_mock_payment", {
           p_order_id: created.order_id,
@@ -271,6 +292,25 @@ export default function CheckoutPage() {
                 <input required type="tel" maxLength={32} value={phone} onChange={event => setPhone(event.target.value)} placeholder="+254 7xx xxx xxx" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 font-normal" />
               </label>
             </div>
+
+            {method === "platform_delivery" && <div className="mt-5 border-t border-slate-200 pt-5">
+              <h3 className="text-sm font-bold">Exact destination on the map</h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Place the pin where the rider should hand over the order. Shilevi never reads your device location unless you press
+                the button, and it never guesses a point from a county name. Without a pin a rider is still assigned, but by declared
+                routes rather than distance, and no distance is shown to you.
+              </p>
+              <div className="mt-3">
+                <MapPinPicker
+                  value={pin}
+                  onChange={setPin}
+                  landmark={landmark}
+                  onLandmarkChange={setLandmark}
+                  landmarkLabel="Directions for the rider"
+                />
+              </div>
+            </div>}
+
             <p className="mt-4 text-xs leading-5 text-slate-500">Your exact address is not shown on public listings. It is shared only with the seller and the assigned rider for an active order.</p>
           </section>}
 

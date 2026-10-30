@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { providerActivityFrom } from "@/lib/auth/signup-intent";
 
 const activities = [
   { value: "product_seller", label: "Product seller", detail: "Sell approved physical goods." },
@@ -90,6 +91,11 @@ export default function ProviderApplyPage() {
 
   useEffect(() => {
     let alive = true;
+    // Registration sends a new provider-intent account here with `?activity=`. It only preselects
+    // the form; nothing is submitted, approved or activated by arriving with that parameter.
+    const requested = providerActivityFrom(new URLSearchParams(window.location.search).get("activity"));
+    if (requested) setActivity(requested);
+
     async function checkSession() {
       try {
         const supabase = createSupabaseBrowserClient();
@@ -191,7 +197,7 @@ export default function ProviderApplyPage() {
       setSuccess(true);
       setMessage("Application submitted. It is now read-only while the owner reviews it.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not submit this application. Confirm migration 0006 is applied.");
+      setMessage(error instanceof Error ? error.message : "We could not submit this application right now. Your draft is kept; please try again.");
     } finally {
       setBusy("");
     }

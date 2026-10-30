@@ -146,7 +146,7 @@ export default function AccountSettingsPage() {
       if (result.error) throw result.error;
       setMessage("Your profile details have been saved."); setMessageKind("success");
     } catch {
-      setMessage("We couldn't save your profile. Confirm migration 0004 is applied and that your session is valid.");
+      setMessage("We couldn't save your profile. Check that you are still signed in and try again.");
       setMessageKind("error");
     } finally { setSavingProfile(false); }
   }
@@ -165,7 +165,7 @@ export default function AccountSettingsPage() {
       setPreferencesSuccess(true);
       setPreferencesMessage("Your notification preferences have been saved. Delivery channels will honor these choices when those notification workflows are implemented.");
     } catch {
-      setPreferencesMessage("Could not save preferences. Confirm migration 0012 is reviewed and applied, then retry.");
+      setPreferencesMessage("Your preferences could not be saved. Please try again.");
     } finally { setSavingPreferences(false); }
   }
 
@@ -236,7 +236,7 @@ export default function AccountSettingsPage() {
       setDeletionStatus(""); setDeletionRequestId(""); setDeletionSuccess(true);
       setDeletionMessage("Your pending deletion request has been cancelled. Your account remains active.");
     } catch {
-      setDeletionMessage("We could not cancel the request. It may already be under review, or migration 0010 may not be applied.");
+      setDeletionMessage("We could not cancel that request. It may already be under review — reload to see its current state.");
     } finally { setCancellingDeletion(false); }
   }
 
@@ -266,7 +266,7 @@ export default function AccountSettingsPage() {
       setDeletionSuccess(true);
       setDeletionMessage("Your request was submitted. This does not immediately delete your account; the Shilevi team must review the request and handle applicable records and retention requirements.");
     } catch (caught) {
-      setDeletionMessage(caught instanceof Error ? caught.message : "We couldn't submit your request. Confirm migration 0008 has been reviewed and applied.");
+      setDeletionMessage(caught instanceof Error ? caught.message : "We couldn't submit your request. Please try again in a moment.");
     } finally { setRequestingDeletion(false); }
   }
 
